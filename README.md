@@ -2,21 +2,21 @@
 powershell functions to make my admin work easier
 
 
-Get-CurrentLoad
+# Get-CurrentLoad
 
 great function to get cpu, hdd, ram, nic and gpu load from this or remote computer
 it support -detailed parameter to display which process are most intensive
 
 
 
-Get-NetworkCapture
+# Get-NetworkCapture
 
 function to capture traffic on local/remote computer/s, export it to etl file and copy to specified location
 
 there is still some work to do, but basic functionality is working
 
 
-Invoke-Command2
+# Invoke-Command2
 
 proxy function to Invoke-Command that solves problem with inputting localhost + remote computers together to ComputerName parameter which end with access denied error, because you cannot run commands against yourself remotely. 
 
