@@ -1,4 +1,3 @@
-#TODO dodelat detailed switch ktery vypise i nejvic zatezujici procesy + zprumerovanou hodnotu ze vsech probehlych mereni?
 function Get-CurrentLoad {
     <#
     .SYNOPSIS
@@ -25,17 +24,17 @@ function Get-CurrentLoad {
         Vychozi je 1.
 
     .EXAMPLE
-        Get-ActualPerformance
+        Get-CurrentLoad
 
         Bude vypisovat aktualni zatizeni na tomto stroji.
 
 	.EXAMPLE
-        Get-ActualPerformance -computername titan01
+        Get-CurrentLoad -computername titan01
 
         Bude vypisovat aktualni zatizeni na stroji titan01.
 
     .EXAMPLE
-        Get-ActualPerformance -detailed CPU
+        Get-CurrentLoad -detailed CPU
 
         Bude vypisovat 5 procesu, ktere nejvic zatezuji CPU na tomto stroji.
     
@@ -62,13 +61,9 @@ function Get-CurrentLoad {
             throw "Pro beh je potreba funkce Invoke-Command2"
         }
 
-        
-    }
-
-    process {
-        Invoke-Command2 -computerName $computerName -argumentList $includeGPU, $detailed, $updateSpeed {
+        $scriptBlock = {
             param ($includeGPU, $detailed, $updateSpeed)
-
+        
             # jmeno counteru musi byt dle jazyku OS
             # chtel jsem pro dynamicke zjisteni lokalizovaneho jmena counteru pouzit funkcihttp://www.powershellmagazine.com/2013/07/19/querying-performance-counters-from-powershell/ ale bylo to nespolehlive, napr u 'Bytes Sent/sec' to vratilo jine ID na ceskem a jine na anglickem OS
             $osLanguage = (Get-WmiObject -Class Win32_OperatingSystem -Property MUILanguages).MUILanguages
@@ -120,7 +115,7 @@ function Get-CurrentLoad {
                     'GPU' { $counterList = @("\$GPUEngine(*)\$utilizationPercentage") } # '\GPU Engine(*)\Utilization Percentage'
                     Default { throw "nedefinovano" }  
                 }
-
+        
                 # na Hyper-V serveru chci u procesu vmwp vypsat, k jakemu VM patri
                 # proto zjistim jmeno, ktere se pouziva v counterech a odpovidajici PID, abych umel pozdeji sparovat se zatezujicim procesem
                 $isHyperVServer = (Get-WmiObject -Namespace "root\virtualization\v2" -Query 'select elementname, caption from Msvm_ComputerSystem where caption = "Virtual Machine"' -ErrorAction SilentlyContinue | select ElementName).count # pokud na nem bezi nejake virtualy, povazuji jej za Hyper-V server                
@@ -130,34 +125,34 @@ function Get-CurrentLoad {
                 }
             } else {
                 [System.Collections.ArrayList] $counterList = @("\$processor(*)\$percentProcessorTime", "\$physicalDisk(*)\$percentDiskTime", "\$memory\$availableMBytes") # "\Processor(*)\% Processor Time", "\PhysicalDisk(*)\% Disk Time", "\Memory\Available MBytes"
-
+        
                 Get-WmiObject -Class Win32_NetworkAdapter -Property physicalAdapter, netEnabled, speed, name | where {$_.PhysicalAdapter -eq $true -and $_.NetEnabled -eq $true} | select name, speed | % {
                     $null = $counterList.Add("\$networkInterface($($_.name))\$bytesSentSec") # "\Network Interface(*)\Bytes Sent/sec"
                     $null = $counterList.Add("\$networkInterface($($_.name))\$bytesReceivedSec") # "\Network Interface(*)\Bytes Received/sec"
                 }
-    
+        
                 if ($includeGPU) {
                     # counter celkem zatezuje CPU, proto jen na vyzadani
                     $null = $counterList.Add("\$gpuEngine(*)\$utilizationPercentage") # '\GPU Engine(*)\Utilization Percentage'
                 }
-
+        
                 $physicalRAMMB = ((Get-WmiObject -Class Win32_OperatingSystem -Property TotalVisibleMemorySize).TotalVisibleMemorySize / 1kb)
             }
-
+        
             # pokud predavam jen 1 counter, musim prevest na string
             if ($counterList.Count -eq 1) {
                 $counterList = $counterList[0]
             }
-
+        
             while (1) {
                 $actualResults = Get-Counter $counterList -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CounterSamples | Group-Object path | % {
                     $_ | Select-Object -Property Name, @{ n = 'Value'; e = { ($_.Group.CookedValue | Measure-Object -Average).Average }} 
                 }
-
+        
                 if (!$actualResults) { throw "Nejsou zadne vysledky mereni, existuji countery: $($CounterList -join ', ') na stroji: $env:COMPUTERNAME?" }
-
+        
                 Clear-Host
-
+        
                 if ($detailed) {
                     # upozornim, ze zobrazuji celkove IO zatizeni danymi procesy, ne pouze HDD ci NIC
                     if ($detailed -in 'HDD', 'NIC') {
@@ -193,7 +188,7 @@ function Get-CurrentLoad {
                 } else {
                     # vypisi celkove zatizeni CPU, HDD, RAM, ...
                     $GPUTotal = 0
-
+        
                     $actualResults.GetEnumerator() | % {
                         $item = $_
                         switch -Wildcard ($_.name) {
@@ -201,17 +196,17 @@ function Get-CurrentLoad {
                                 $core = ([regex]"\(([^)]+)\)").Matches($_).Value
                                 "CPU $core %: " + [math]::Round($item.Value, 2)
                             }
-
+        
                             "*\$availableMBytes" {
                                 "RAM used %: " + [math]::Round((($physicalRAMMB - $item.Value) / ($physicalRAMMB / 100)), 2)
                             }
-
+        
                             "*\$percentDiskTime" {
                                 if ($item.name -like "*_total*") {return}
                                 $name = ([regex]"\(([^)]+)\)").Matches($_).Value
                                 "DISK time $name %: " + [math]::Round($item.Value, 2)
                             }
-
+        
                             "*\$networkInterface*" {
                                 $name = ([regex]"\(([^)]+)\)").Matches($_).Value
                                 
@@ -220,31 +215,42 @@ function Get-CurrentLoad {
                                 } else {
                                     $action = 'received'
                                 }
-
+        
                                 "NIC $name $action MB: " + [math]::Round($item.Value / 1MB, 2)
                             }
-
+        
                             "*$GPUEngine*" {
                                 # GPU nema zadny souhrny _total counter, sectu vsechny hodnoty a vypisi po ukonceni foreach loopu
                                 $GPUTotal += $item.Value
                             }
-
+        
                             Default {
                                 #$item.name + ": " + [math]::Round($item.Value / 1MB, 2)
                                 throw "nedefinovany counter"
                             }
                         }
                     } # konec foreach projiti ziskanych vysledku
-
+        
                     if ($GPUTotal) {
                         "GPU %: " + [math]::Round($GPUTotal, 2)
                     }
                 }
-
+        
                 Start-Sleep $updateSpeed
             } # konec while
-        } # konec Invoke-Command2
-    } # konec process
-}
+        } # konec scriptblock
+    }
 
-Set-Alias top Get-CurrentLoad # obdoba linux prikazu top (a iotop)
+    process {
+        $params = @{
+            "scriptBlock" = $scriptBlock
+            "argumentList" = $includeGPU, $detailed, $updateSpeed
+        }
+
+        if ($computerName -ne $env:COMPUTERNAME) {
+            $params.computerName = $computerName
+        }
+
+        Invoke-Command @params
+    }
+}
