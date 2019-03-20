@@ -1,0 +1,104 @@
+﻿<html><title>Release-Notes</title><body>
+<h1>SplitPipeline Release Notes</h1>
+<h2>v1.5.2</h2>
+<p>Fixed #12 <code>VerbosePreference</code> can be any value.</p>
+<h2>v1.5.1</h2>
+<p>Fixed #10 Tight loop in <code>EndProcessing()</code></p>
+<h2>v1.5.0</h2>
+<p><code>Count</code> accepts one or two values. One is as usual. Two values limit the number
+of required pipelines also taking into account the number of processors. (Too
+many pipelines on machines with many cores is not always optimal.)</p>
+<p>Corrected the test/demo script <em>Test-ProgressTotal.ps1</em>.</p>
+<p>Minor performance tweaks on creation of runspaces.</p>
+<h2>v1.4.3</h2>
+<p>Fixed duplicated debug, warning, and verbose messages (v1.4.2).</p>
+<h2>v1.4.2</h2>
+<p>Pipeline runspaces are created with the host used by <code>Split-Pipeline</code>. As a
+result, some host features can be used by pipeline scripts, e.g. <code>Write-Host</code>
+and even <code>Write-Progress</code>, see <code>Test-Progress*.ps1</code> in the project repository.</p>
+<h2>v1.4.1</h2>
+<p>If the minimum <code>Load</code> is less than 1 then the parameter is treated as omitted.</p>
+<h2>v1.4.0</h2>
+<p><em>Potentially incompatible change</em>. By default, i.e. when <code>Load</code> is omitted, the
+whole input is collected and split evenly between parallel pipelines. This way
+seems to be the most effective in simple cases. In other cases, e.g. on large
+or slow input, <code>Load</code> should be used in order to enable processing of input
+parts and specify their limits.</p>
+<p>Corrected input item count in <code>Refill</code> mode in verbose statistics.</p>
+<p>Refactoring of ending, closing, and stopping.</p>
+<h2>v1.3.1</h2>
+<p>Removed the obsolete switch <code>Auto</code> and pieces of old code.</p>
+<h2>v1.3.0</h2>
+<p>Reviewed automatic load balancing, made it the default and less aggressive
+(<em>potentially incompatible change</em>). The obsolete switch <code>Auto</code> still exists
+but it is ignored. Use the parameter <code>Load</code> in order to specify part limits.
+E.g. <code>-Load N,N</code> tells to use N items per pipeline, i.e. no load balancing.</p>
+<p>In order words: a) <code>Auto</code> is slightly redundant with <code>Load</code>; b) not using
+<code>Auto</code>, e.g. forgetting, often causes less effective work. <code>Auto</code> will be
+removed in the next version.</p>
+<p>Improved stopping (e.g. by <code>[Ctrl-C]</code>):</p>
+<ul>
+<li>Fixed some known and some potential issues.</li>
+<li>The <code>Finally</code> script should work on stopping.</li>
+</ul>
+<p>Amended verbose messages. They are for:</p>
+<ul>
+<li>Each job feed with current data.</li>
+<li>End of processing with end data.</li>
+<li>Summary with totals.</li>
+</ul>
+<h2>v1.2.1</h2>
+<p>Added processing of <code>StopProcessing()</code> which is called on <code>[Ctrl-C]</code>. Note that
+stopping is normally not recommended. But in some cases &quot;under construction&quot; it
+may help, e.g. <a href="https://github.com/nightroman/SplitPipeline/issues/3">#3</a>.</p>
+<h2>v1.2.0</h2>
+<p>Debug streams of parallel pipelines are processed as well and debug messages
+are propagated to the main pipeline, just like errors, warnings, and verbose
+messages.</p>
+<h2>v1.1.0</h2>
+<p>New parameter <code>ApartmentState</code>.</p>
+<h2>v1.0.1</h2>
+<p>Help. Mentioned why and when to use <code>Variable</code>, <code>Function</code>, and <code>Module</code>. Added
+the related example.</p>
+<h2>v1.0.0</h2>
+<p>Minor cosmetic changes in help and code. The API seems to be stabilized and no
+issues were found for a while. Changed the status from &quot;beta&quot; to &quot;release&quot;.</p>
+<h2>v0.4.1</h2>
+<p>Refactoring and minor improvements.</p>
+<h2>v0.4.0</h2>
+<p>Revision of parameters and automatic load balancing (mostly simplification).
+Joined parameters Load and Limit into the single parameter Load (one or two
+values). Removed parameters Cost (not needed now) and Queue (Load is used in
+order to limit the queue).</p>
+<h2>v0.3.2</h2>
+<p>Minor tweaks.</p>
+<h2>v0.3.1</h2>
+<p>Refilled input makes infinite loops possible in some scenarios. Use the new
+parameter <code>Filter</code> in order to exclude already processed objects and avoid
+loops.</p>
+<h2>v0.3.0</h2>
+<p>New switch <code>Refill</code> tells to refill the input queue from output. <code>[ref]</code>
+objects are intercepted and added to the input queue. Other objects go to
+output as usual. See an example in help and
+<a href="https://github.com/nightroman/SplitPipeline/blob/master/Tests/Test-Refill.ps1">Test-Refill.ps1</a>.</p>
+<p>Tweaks in feeding parallel pipelines and automatic tuning of load.</p>
+<h2>v0.2.0</h2>
+<p>New switch <code>Order</code> tells to output part results in the same order as input
+parts arrive. Thus, although order of processing is not predictable, output
+order can be made predictable. This feature open doors for more scenarios.</p>
+<p>Added checks for <code>Stopping</code> in <code>EndProcessing</code> (faster stop on <code>Ctrl+C</code>).</p>
+<h2>v0.1.1</h2>
+<p>Tweaks, including related to PowerShell V3 CTP2.</p>
+<h2>v0.1.0</h2>
+<p>New switch <code>Auto</code> is used in order to determine Load values automatically during
+processing. Use <code>Verbose</code> in order to view some related information. Yet another
+new parameter <code>Cost</code> is used together with <code>Auto</code>; it is introduced rather for
+experiments.</p>
+<h2>v0.0.1</h2>
+<p>This is the first of v0 series (pre-release versions). Cmdlet parameters and
+behaviour may change.</p>
+<p>The cmdlet Split-Pipeline passes simple tests and shows good performance gain
+in a few practical scenarios.</p>
+<p>Failures, errors, warnings, and verbose messages from parallel pipelines are
+trivial, straightforward, and perhaps not useful enough for troubleshooting.</p>
+</body></html>

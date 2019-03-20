@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>SplitPipeline</id>
+    <version>1.5.2</version>
+    <authors>Roman Kuzmin</authors>
+    <owners>Roman Kuzmin</owners>
+    <licenseUrl>http://www.apache.org/licenses/LICENSE-2.0</licenseUrl>
+    <projectUrl>https://github.com/nightroman/SplitPipeline</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>PowerShell module for parallel data processing. Split-Pipeline splits the
+input, processes parts by parallel pipelines, and outputs data for further
+processing. It may work without collecting the whole input, large or infinite.
+
+---
+
+To install SplitPipeline, follow the Quick Start steps:
+https://github.com/nightroman/SplitPipeline#quick-start
+
+---</description>
+    <summary>PowerShell module for parallel data processing. Split-Pipeline splits the
+input, processes parts by parallel pipelines, and outputs data for further
+processing. It may work without collecting the whole input, large or infinite.</summary>
+    <releaseNotes>https://github.com/nightroman/SplitPipeline/blob/master/Release-Notes.md</releaseNotes>
+    <tags>PowerShell Module Parallel</tags>
+  </metadata>
+</package>
