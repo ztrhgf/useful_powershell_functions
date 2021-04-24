@@ -374,5 +374,14 @@ function Export-Scripts2Module {
 
         Write-Output "      - $(Split-Path $moduleFolder -Leaf)"
         _generatePSModule @param
+
+        # check generated module syntax
+        Get-ChildItem $moduleFolder -File -Recurse | % {
+            $file = $_.FullName
+            $syntaxError = _checkSyntax $file
+            if ($syntaxError) {
+                throw "In module file $file were found these syntax problems:`n$syntaxError"
+            }
+        }
     }
 }
