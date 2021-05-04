@@ -10,6 +10,7 @@
     Will connect to API and return results according to given query.
     Supports local connection and also internet through CMG.
     Use credentials with READ rights on queried source at least.
+    For best performance defined filter and select parameters.
 
     .PARAMETER ServerFQDN
     For intranet clients
@@ -31,6 +32,7 @@
     .PARAMETER Filter
     For filtering the returned results.
     Accept string representing the filter statement.
+    Makes query significantly faster!
 
     Examples:
     - "name eq 'ni-20-ntb'"
@@ -44,6 +46,7 @@
     .PARAMETER Select
     For filtering returned properties.
     Accept list of properties you want to return.
+    Makes query significantly faster!
 
     Examples:
     - "MACAddresses", "Name"
@@ -106,14 +109,7 @@
         ,
         [string] $Filter
         ,
-        [ValidateScript( {
-                If ($_ -match " ") {
-                    Throw "$_ cannot contain spaces. Just property names divided by comma (for example: 'Name,Description'"
-                } else {
-                    $true
-                }
-            })]
-        [string] $Select
+        [string[]] $Select
         ,
         [parameter(Mandatory = $true, HelpMessage = "Set the CMG ExternalUrl for the AdminService.", ParameterSetName = "Internet")]
         [ValidateNotNullOrEmpty()]
@@ -264,7 +260,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 $Body."`$filter" = $Filter
             }
             if ($Select) {
-                $Body."`$select" = $Select
+                $Body."`$select" = ($Select -join ",")
             }
 
             switch ($PSCmdlet.ParameterSetName) {
