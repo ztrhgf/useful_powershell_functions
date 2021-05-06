@@ -134,7 +134,7 @@
             param ($object)
 
             $type = $object.gettype()
-            if ($type.Name -eq 'Object[]' -and $type.BaseType.Name -eq 'Array') {
+            if (($type.Name -eq 'Object[]' -and $type.BaseType.Name -eq 'Array') -or ($type.Name -eq 'ArrayList')) {
                 Write-Verbose "array"
                 ($object | % {
                         _convertToStringRepresentation $_
@@ -149,7 +149,7 @@
                 Write-Verbose "string"
                 "'$object'"
             } else {
-                throw "undefined"
+                throw "undefined type"
             }
         }
         if ($returnHashItself) {
@@ -640,7 +640,7 @@ namespace RunAsUser
 
     #region prepare Invoke-Command parameters
     # export this function to remote session (so I am not dependant whether it exists there or not)
-    $allFunctionDefs = "function Invoke-AsLoggedUser { ${function:Invoke-AsLoggedUser} }; function Create-VariableTextDefinition { ${function:Create-VariableTextDefinition} }; function Get-LoggedOnUser { ${function:Get-LoggedOnUser} } "
+    $allFunctionDefs = "function Invoke-AsLoggedUser { ${function:Invoke-AsLoggedUser} }; function Create-VariableTextDefinition { ${function:Create-VariableTextDefinition} }; function Get-LoggedOnUser { ${function:Get-LoggedOnUser} }"
 
     $param = @{
         argumentList = $scriptBlock, $NoWait, $UseWindowsPowerShell, $NonElevatedSession, $Visible, $CacheToDisk, $allFunctionDefs, $VerbosePreference, $ReturnTranscript, $Argument
