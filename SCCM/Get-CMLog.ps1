@@ -13,7 +13,7 @@
 
     .PARAMETER computerName
     Name of computer whose logs you are interested in.
-    In case the problem is related to SCCM server, this parameter will be ommited.
+    In case the problem is related to SCCM server, this parameter will be omitted.
 
     .PARAMETER problem
     Type of problem you are investigating.
@@ -34,6 +34,7 @@
     PolicyProcessing
     PXE
     OSInstallation
+    WOL
 
     .PARAMETER maxHistory
     How much archived logs you want to see.
@@ -42,7 +43,7 @@
     .PARAMETER SCCMServer
     Name of SCCM server. Will be automatically used in case the problem is related to server, not the client.
 
-    Default is $_SCCMServer
+    Default is $_SCCMServer.
 
     .EXAMPLE
     Get-CMLog -computerName titan01 -problem AppInstallation
@@ -51,18 +52,24 @@
 
 
     .EXAMPLE
-    Get-CMLog -problem PXE -SCCMServer mysccmservername
+    Get-CMLog -problem PXE -SCCMServer 'mysccmservername'
 
     Opens all logs related to PXE problem on SCCM server 'mysccmservername'.
+
+    .NOTES
+    To add new "problem" area:
+        - add its name to ValidateSet of $problem parameter
+        - add its name to $serverProblems if applicable
+        - add new section to switch section
     #>
 
     [CmdletBinding()]
     param (
         [Parameter(Position = 0)]
-        [string] $computerName = $env:COMPUTERNAME
+        [string] $computerName
         ,
         [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateSet("AppInstallation", "AppDiscovery", "AppDownload", "PXE", "ContentDistribution", "OSInstallation", "CMClientInstallation", "CMClientPush", "Co-Management", "PolicyProcessing", "CMG", "CMGClient", "CMGDeployment", "Compliance", "Client Discovery", "Inventory")]
+        [ValidateSet("AppInstallation", "AppDiscovery", "AppDownload", "PXE", "ContentDistribution", "OSInstallation", "CMClientInstallation", "CMClientPush", "Co-Management", "PolicyProcessing", "CMG", "CMGClient", "CMGDeployment", "Compliance", "Client Discovery", "Inventory", "WOL")]
         [ValidateNotNullOrEmpty()]
         [string] $problem
         ,
@@ -74,16 +81,21 @@
 
     begin {
         # list of 'problems' whose logs are stored on SCCM server
-        $serverProblems = "PXE", "ContentDistribution", "CMClientPush", "CMG", "CMGClient", "CMGDeployment", "Client Discovery"
+        $serverProblems = "PXE", "ContentDistribution", "CMClientPush", "CMG", "CMGClient", "CMGDeployment", "Client Discovery", "WOL"
         if ($problem -in $serverProblems -and !$SCCMServer) {
             throw "Problem '$problem' is related to SCCM server, but you didn't specify SCCMServer parameter."
         }
-        if ($problem -in $serverProblems -and $computerName -ne $SCCMServer) {
-            $computerName = $SCCMServer
+        if ($problem -in $serverProblems -and $computerName) {
             Write-Warning "Problem '$problem' is related to SCCM server ($SCCMServer). Therefore ignoring computerName parameter."
         }
 
-        $clLog = "\\$computerName\C$\Windows\CCM\Logs"
+        # client log location
+        if ($computerName) {
+            $clLog = "\\$computerName\C$\Windows\CCM\Logs"
+        } else {
+            $clLog = "C:\Windows\CCM\Logs"
+        }
+        # server log locations
         $servLog = "\\$SCCMServer\C$\Program Files\SMS_CCM\Logs"
         $servLog2 = "\\$SCCMServer\C$\Program Files\Microsoft Configuration Manager\Logs"
 
@@ -276,12 +288,13 @@
                 _openLog "$clLog\InventoryAgent.log"
             }
 
+            "WOL" {
+                _openLog "$servLog2\Wolmgr.log", "$servLog2\WolCmgr.log"
+            }
+
             Default {
                 throw "Undefined problem"
             }
         }
-    }
-
-    end {
     }
 }
