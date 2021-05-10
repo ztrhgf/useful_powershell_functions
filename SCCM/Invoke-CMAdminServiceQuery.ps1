@@ -1,4 +1,4 @@
-﻿function Invoke-SCAdminServiceQuery {
+﻿function Invoke-CMAdminServiceQuery {
     <#
     .SYNOPSIS
     Function for retrieving information from SCCM Admin Service REST API.
@@ -75,10 +75,10 @@
     If you do not enable this option, you need to make sure the certificate used by the AdminService is trusted by the device.
 
     .EXAMPLE
-    Invoke-SCAdminServiceQuery -Source "wmi/SMS_R_SYSTEM" -Filter "name eq 'ni-20-ntb'" -Select MACAddresses
+    Invoke-CMAdminServiceQuery -Source "wmi/SMS_R_SYSTEM" -Filter "name eq 'ni-20-ntb'" -Select MACAddresses
 
     .EXAMPLE
-    Invoke-SCAdminServiceQuery -Source "wmi/SMS_R_SYSTEM" -Filter "startswith(Name,'AE-')" -Select Name, MACAddresses
+    Invoke-CMAdminServiceQuery -Source "wmi/SMS_R_SYSTEM" -Filter "startswith(Name,'AE-')" -Select Name, MACAddresses
 
     .NOTES
     !!!Credits goes to author of https://github.com/CharlesNRU/mdm-adminservice/blob/master/Invoke-GetPackageIDFromAdminService.ps1 (I just generalize it and made some improvements)
@@ -103,7 +103,7 @@
                 param ($Command, $Parameter, $WordToComplete, $CommandAst, $FakeBoundParams)
                 $source = ($WordToComplete -split "/")[0]
                 $class = ($WordToComplete -split "/")[1]
-                Invoke-SCAdminServiceQuery -Source "$source/" | ? { $_.url -like "*$class*" } | select -exp url | % { "$source/$_" }
+                Invoke-CMAdminServiceQuery -Source "$source/" | ? { $_.url -like "*$class*" } | select -exp url | % { "$source/$_" }
             })]
         [string] $Source
         ,
