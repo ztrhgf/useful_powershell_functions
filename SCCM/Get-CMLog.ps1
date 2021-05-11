@@ -95,6 +95,12 @@
         } else {
             $clLog = "C:\Windows\CCM\Logs"
         }
+        # client setup log location
+        if ($computerName) {
+            $clStpLog = "\\$computerName\C$\Windows\ccmsetup\Logs"
+        } else {
+            $clStpLog = "C:\Windows\ccmsetup\Logs\"
+        }
         # server log locations
         $servLog = "\\$SCCMServer\C$\Program Files\SMS_CCM\Logs"
         $servLog2 = "\\$SCCMServer\C$\Program Files\Microsoft Configuration Manager\Logs"
@@ -208,8 +214,9 @@
                 "Ccmsetup-ccmeval"
                 "CcmRepair"
                 "Client.msi"
+                "client.msi_uninstall"
 
-                _openLog "$clLog\Ccmsetup.log", "$clLog\Ccmsetup-ccmeval.log", "$clLog\CcmRepair.log", "$clLog\Client.msi.log"
+                _openLog "$clStpLog\Ccmsetup.log", "$clStpLog\Ccmsetup-ccmeval.log", "$clLog\CcmRepair.log", "$clStpLog\Client.msi.log", "$clStpLog\client.msi_uninstall.log"
             }
 
             "CMClientPush" {
