@@ -763,7 +763,7 @@ Invoke-AsLoggedUser -ScriptBlock `$scriptblock $VerboseParam $ReturnTranscriptPa
         if ($ReturnTranscript) {
             # return just interesting part of transcript
             if (Test-Path $TranscriptPath) {
-                (((Get-Content $TranscriptPath -Raw) -Split [regex]::escape('**********************'))[2] -split "`n" | Select-Object -Skip 3 | Select-Object -SkipLast 3) -join "`n"
+                (((Get-Content $TranscriptPath -Raw) -Split [regex]::escape('**********************'))[2] -split "`n" | Select-Object -Skip 2 | Select-Object -SkipLast 3) -join "`n"
                 Remove-Item (Split-Path $TranscriptPath -Parent) -Recurse -Force
             } else {
                 Write-Warning "There is no transcript, command probably failed!"
