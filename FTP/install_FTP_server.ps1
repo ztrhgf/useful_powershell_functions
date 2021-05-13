@@ -224,3 +224,5 @@ netsh advfirewall set global Statefulftp disable
 Restart-Service ftpsvc -Force
 
 Write-Warning "Don't forget to:`n - set FW (Security Groups) in AWS (use existing 'FTP server')`n - set Elastic IP of this server in it's DNS record"
+
+Write-Warning "Check NTFS permission on $FTPRootDir if it suit your needs!"
