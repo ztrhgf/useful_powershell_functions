@@ -24,6 +24,10 @@ param (
     $writeFTPuser = (Read-Host "Enter name of WRITE FTP account")
 )
 
+if (! ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    throw "Run with administrator rights"
+}
+
 Write-Warning "Public IP of this server has to remain the same, so in AWS use elastic IP, otherwise after each start, VM gets new IP!!!`n"
 Write-Warning "For FTP in passive mode to work correctly, public IP of this computer will be set in IIS. In case this computer doesn't have it's final IP (you will set Elastic IP etc), DO NOT CONTINUE!"
 $choice = ""
