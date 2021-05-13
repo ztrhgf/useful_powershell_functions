@@ -4,7 +4,7 @@ script will set up new Windows Server as FTP server:
 - create FTP site
 - create READ and WRITE users and grant them permissions to IIS
 - set Window Updates
-- if finds RAD disk, format and assign E: letter and use it as FTP root otherwise 'C:\FTP_Root'
+- if finds RAW disk, format and assign E: letter and use it as FTP root otherwise 'C:\FTP_Root'
 - in FTP root creates WRITE and READ folders and set appropriate NTFS permissions
 - change ports for passive FTP to 60000-65535
 - enable FTPS (using self-signed certificate)
@@ -208,6 +208,7 @@ Set-ItemProperty -Path $FTPSitePath -Name ftpServer.firewallSupport.externalIp4A
 
 # change range of ports for passive FTP to 60000-65535 (default contains even 3389 i.e. RDP!)
 cmd /c "$env:windir\System32\inetsrv\appcmd set config /section:system.ftpServer/firewallSupport /lowDataChannelPort:60000 /highDataChannelPort:65535"
+#endregion set FTP
 
 # restart site to apply the changes
 Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
