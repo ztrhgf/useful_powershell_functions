@@ -1,15 +1,22 @@
-﻿########################################################################################################################
-# !MODIFY TO MATCH YOUR ORGANIZATION!
-$baseUri = 'https://contoso.atlassian.net/wiki'
+﻿####################  !MODIFY TO MATCH YOUR ORGANIZATION!  ####################
+# $baseUri = 'https://contoso.atlassian.net/wiki'
+$baseUri = Read-Host "Enter base URL of your Confluence wiki (something like 'https://contoso.atlassian.net/wiki'"
 
-# !MODIFY TO MATCH THE PAGE YOU WANT TO WORK WITH!
-# its the number part from page URL you want to work with https://contoso.atlassian.net/wiki/spaces/IT/pages/2920906911/Edge+Network+Overview
-$pageID = "2920906911"
+# $pageID = "2920906911"
+$pageID = Read-Host "Enter ID of the Confluence page you want to work with (its the number part from page URL you want to work with i.e. 2920906911 for URL https://contoso.atlassian.net/wiki/spaces/IT/pages/2920906911/Edge+Network+Overview)"
 
 # !MODIFY TO MATCH THE ZONE ID OF THE DNS ZONE YOU WANT TO WORK WITH!
-$domainZoneID = "Z01320692HE4O8HBIG967"
+# $domainZoneID = "Z01320692HE4O8HBIG967"
+$domainZoneID = Read-Host "Enter ID of the AWS Zone Domain you want the records from (something like Z01320692HE4O8HBIG967)"
+################################################################################
 
-########################################################################################################################
+
+<#
+
+Script will get DNS records from given AWS DNZ Zone and use them to create HTML table and save it to given Confluence wiki page.
+In case there is already some HTML table there, extra information from it will be retained.
+
+#>
 
 
 # confluence user account and its API key (NOT password!), that has appropriate permissions on given Confluence page
