@@ -16,6 +16,8 @@ $domainZoneID = Read-Host "Enter ID of the AWS Zone Domain you want the records 
 Script will get DNS records from given AWS DNZ Zone and use them to create HTML table and save it to given Confluence wiki page.
 In case there is already some HTML table there, extra information from it will be retained.
 
+More information at https://doitpsway.com/how-to-createupdateread-html-table-on-confluence-wiki-page-using-powershell
+
 #>
 
 
