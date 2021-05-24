@@ -43,6 +43,17 @@ function Get-ADGroupMemberRecursive {
                     $true
                 }
             })]
+        [ArgumentCompleter( {
+                param ($Command, $Parameter, $WordToComplete, $CommandAst, $FakeBoundParams)
+
+                $ADDN = ([ADSI]"LDAP://RootDSE").rootDomainNamingContext
+                $searcher = [adsisearcher]"(objectCategory=group)"
+                $searcher.PageSize = 500
+                $searcher.PropertiesToLoad.AddRange('name')
+                $searcher.searchRoot = [adsi]"LDAP://$ADDN"
+                ($searcher.FindAll() | ? { $_.properties.name -like "*$WordToComplete*" }).properties.name
+                $searcher.Dispose()
+            })]
         [string] $name
         ,
         [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "DN")]
@@ -68,7 +79,7 @@ function Get-ADGroupMemberRecursive {
     }
 
     if ($justGroup -and $userAndGroup) {
-        throw "You cannot user both justGroup and userAndGroup"
+        throw "You cannot use both justGroup and userAndGroup"
     }
 
     if ($name) {
@@ -88,6 +99,7 @@ function Get-ADGroupMemberRecursive {
             $objAD = [adsi]"LDAP://$objmembermod"
             $attObjClass = $objAD.properties.item("objectClass")
             if ($attObjClass -eq "group") {
+                Write-Verbose "$($objAD.name) is group"
                 if ($justGroup -or $userAndGroup) {
                     $objAD.name
                 }
@@ -97,6 +109,7 @@ function Get-ADGroupMemberRecursive {
                 $params.distinguishedName = $_
                 Get-ADGroupMemberRecursive @params
             } else {
+                Write-Verbose "$($objAD.name) is account"
                 if (!($justGroup) -or $userAndGroup) {
                     $objAD.sAMAccountName
                 }
@@ -107,3 +120,4 @@ function Get-ADGroupMemberRecursive {
         return
     }
 }
+
