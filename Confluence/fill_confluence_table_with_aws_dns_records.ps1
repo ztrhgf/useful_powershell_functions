@@ -65,7 +65,7 @@ function _getAWSDNSZoneRecord {
     do {
         $recordSet = Get-R53ResourceRecordSet -HostedZoneId "/hostedzone/$domainZoneID" -StartRecordIdentifier $nextIdentifier -StartRecordName $nextName -StartRecordType $nextType
 
-        $recordSet.ResourceRecordSets | select @{n = "name"; e = { $name = $_.name -replace "\.?kentico.com\.$"; if ([string]::IsNullOrEmpty($name)) { "@" } else { $name } } }, type , @{n = "value"; e = { $_.ResourceRecords.value } } | % {
+        $recordSet.ResourceRecordSets | select @{n = "name"; e = { $name = $_.name; if ([string]::IsNullOrEmpty($name)) { "@" } else { $name } } }, type , @{n = "value"; e = { $_.ResourceRecords.value } } | % {
             $name = $_.name
             $type = $_.type
             if ($_.value.getType().name -ne "String") {
