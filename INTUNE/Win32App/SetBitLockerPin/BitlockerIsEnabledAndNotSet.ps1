@@ -1,0 +1,2 @@
+# prerequisite for showing up GUI for entering Bitlocker PIN
+if (Get-BitLockerVolume -MountPoint $env:SystemDrive -ea silentlycontinue | ? { $_.VolumeStatus -in "FullyEncrypted", "EncryptionInProgress" -and $_.KeyProtector.KeyProtectorType -notcontains 'TpmPin' }) { $true } else { $false }
