@@ -92,7 +92,7 @@
 
                 if ($deviceComplianceData.$deviceName) {
                     # get error details for this particular compliance setting
-                    $errorDescription = $deviceComplianceData.$deviceName | ? { $_.setting -eq $complianceSettingId -and $_.userPrincipalName -eq $userPrincipalName } | select -ExpandProperty errorDescription
+                    $errorDescription = $deviceComplianceData.$deviceName | ? { $_.setting -eq $complianceSettingId -and $_.userPrincipalName -eq $userPrincipalName -and $_.errorDescription -ne "No error code" } | select -ExpandProperty errorDescription
                 }
                 #endregion get error details (if exists) for this particular device and compliance setting
 
