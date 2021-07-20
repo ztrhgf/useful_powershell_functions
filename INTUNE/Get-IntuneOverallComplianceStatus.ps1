@@ -62,9 +62,9 @@
 
             # add help text, to help understand, what this compliance setting validates
             switch ($_.name) {
-                'RequireRemainContact' { Write-Verbose "`nDESCRIPTION: devices that haven't contacted Intune for last 30 days" }
-                'RequireDeviceCompliancePolicyAssigned' { Write-Verbose "`nDESCRIPTION: devices without any compliance policy assigned" }
-                'ConfigurationManagerComplianceRequired' { Write-Verbose "`nDESCRIPTION: devices that are not compliant in SCCM" }
+                'RequireRemainContact' { Write-Warning "`t- devices that haven't contacted Intune for last 30 days" }
+                'RequireDeviceCompliancePolicyAssigned' { Write-Warning "`t- devices without any compliance policy assigned" }
+                'ConfigurationManagerComplianceRequired' { Write-Warning "`t- devices that are not compliant in SCCM" }
             }
 
             # get devices, where this particular compliance setting is not ok
