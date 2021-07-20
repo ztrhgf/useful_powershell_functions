@@ -12,6 +12,8 @@
     .PARAMETER TenantDomainName
     Name of your Azure tenant.
 
+    <yourtenantdomain>.onmicrosoft.com
+
     .EXAMPLE
     $header = New-IntuneAuthHeader -credential $cred
     $URI = 'https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/'
@@ -29,7 +31,7 @@
         [System.Management.Automation.PSCredential] $credential = (Get-Credential -Message "Enter AppID as UserName and AppSecret as Password"),
 
         [ValidateNotNullOrEmpty()]
-        $tenantDomainName = <yourtenantdomain>.onmicrosoft.com # REPLACE
+        $tenantDomainName
     )
 
     if (!$credential) { throw "Credential is missing" }
