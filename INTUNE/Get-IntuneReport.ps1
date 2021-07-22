@@ -53,6 +53,15 @@
     .NOTES
     You need to have Azure App registration with appropriate API permissions for Graph API for unattended usage!
 
+    With these API permissions all reports work (but maybe not all are really needed!)
+    Application.Read.All
+    Device.Read.All
+    DeviceManagementApps.Read.All
+    DeviceManagementConfiguration.Read.All
+    DeviceManagementManagedDevices.Read.All
+    ProgramControl.Read.All
+    Reports.Read.All
+
     .LINK
     https://docs.microsoft.com/en-us/mem/intune/fundamentals/reports-export-graph-apis
     https://docs.microsoft.com/en-us/mem/intune/fundamentals/reports-export-graph-available-reports
