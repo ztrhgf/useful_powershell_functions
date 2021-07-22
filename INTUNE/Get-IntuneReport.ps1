@@ -7,6 +7,8 @@
     Function for getting Intune Reports data. As zip file (csv) or PS object.
     It uses Graph API for connection.
 
+    In case selected report needs additional information, like what application you want report for, GUI with available options will be outputted for you to choose.
+
     .PARAMETER reportName
     Name of the report you want to get.
 
@@ -30,13 +32,25 @@
     DeviceInstallStatusByApp	            Under Apps > All Apps > Select an individual app
     UserInstallStatusAggregateByApp	        Under Apps > All Apps > Select an individual app
 
+    .PARAMETER header
+    Authentication header.
+
+    Can be created via New-IntuneAuthHeader.
+
+    .PARAMETER filter
+    String that represents Graph request API filter.
+
+    For example: PolicyId eq 'a402829f-8ba2-4413-969b-077a97ba218c'
+
+    PS: Some reports (FeatureUpdateDeviceState, DeviceInstallStatusByApp, UserInstallStatusAggregateByApp) requires filter to target the update/application. In case you don't specify it, list of available values will be given to choose.
+
     .PARAMETER exportPath
     Path to folder, where report should be stored.
 
     Default is working folder.
 
     .PARAMETER asObject
-    Switch that instead of exporting reports data to file, outputs the result to console as object.
+    Switch for getting results as PS object instead of zip file.
 
     .EXAMPLE
     $header = New-IntuneAuthHeader -ErrorAction Stop
@@ -49,6 +63,10 @@
     Get-IntuneReport -header $header -reportName DeviceNonCompliance
 
     Download zip archive to current working folder containing csv file with 'Non-compliant devices' report.
+
+    .EXAMPLE
+    $header = New-IntuneAuthHeader -ErrorAction Stop
+    Get-IntuneReport -header $header -reportName FeatureUpdateDeviceState -filter "PolicyId eq 'a402829f-8ba2-4413-969b-077a97ba218c'"
 
     .NOTES
     You need to have Azure App registration with appropriate API permissions for Graph API for unattended usage!
@@ -75,6 +93,8 @@
         ,
         [hashtable] $header
         ,
+        [string] $filter
+        ,
         [ValidateScript( {
                 If (Test-Path $_ -PathType Container) {
                     $true
@@ -87,55 +107,35 @@
         [switch] $asObject
     )
 
-    $ErrorActionPreference = "Stop"
+    begin {
+        $ErrorActionPreference = "Stop"
 
-    if (!$header) {
-        # authenticate
-        $header = New-IntuneAuthHeader -ErrorAction Stop
-    }
-
-    #region generate report
-    $body = @{
-        reportName = $reportName
-        format     = "csv"
-        # select     = "DeviceName", "managementAgent", "ownerType", "complianceState", "OS", "OSVersion", "LastContact", "UPN", "DeviceId"
-        # filter     = "(IsManaged eq True)"
-    }
-    Write-Warning "Requesting the report $reportName"
-    $result = Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs" -Body $body -Method Post
-
-    # waiting for finish
-    Write-Warning "Waiting report generating to finish"
-    do {
-        $export = Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$($result.id)')" -Method Get
-
-        Start-Sleep 1
-    } while ($export.status -eq "inProgress")
-    #endregion generate report
-    #region download generated report
-    if ($export.status -eq "completed") {
-        $originalFileName = $export.id + ".csv"
-        $reportArchive = Join-Path $exportPath "$reportName`_$(Get-Date -Format dd-MM-HH-ss).zip"
-        Write-Warning "Downloading the report to $reportArchive"
-        $null = Invoke-WebRequest -Uri $export.url -Method Get -OutFile $reportArchive
-
-        if ($asObject) {
-            Write-Warning "Expanding $reportArchive to $env:TEMP"
-            Expand-Archive $reportArchive -DestinationPath $env:TEMP -Force
-
-            $reportCsv = Join-Path $env:TEMP $originalFileName
-            Write-Warning "Importing $reportCsv"
-            Import-Csv $reportCsv
-
-            # delete zip and also extracted csv files
-            Write-Warning "Removing archive and csv"
-            Remove-Item $reportArchive, $reportCsv -Force
+        if (!$header) {
+            # authenticate
+            $header = New-IntuneAuthHeader -ErrorAction Stop
         }
-    } else {
-        throw "Export of $reportName failed.`n`n$export"
-    }
-    #endregion download generated report
-}           $filter = $filterList | Out-GridView -Title "Select Update type you want the report for" -OutputMode Single | % { "PolicyId eq '$($_.PolicyId)'" }
+
+        #region prepare filter for FeatureUpdateDeviceState report if not available
+        if ($reportName -eq 'FeatureUpdateDeviceState' -and (!$filter -or $filter -notmatch "^PolicyId eq ")) {
+            Write-Warning "Report FeatureUpdateDeviceState requires special filter in form: `"PolicyId eq '<somePolicyId>'`""
+            $body = @{
+                name = "FeatureUpdatePolicy"
+            }
+            $filterResponse = Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/getReportFilters" -Body $body -Method Post
+            $column = $filterResponse.schema.column
+            $filterList = $filterResponse.values | % {
+                $filterItem = $_
+
+                $property = @{}
+                $o = 0
+                $column | % {
+                    $property.$_ = $filterItem[$o]
+                    ++$o
+                }
+                New-Object -TypeName PSObject -Property $property
+            }
+
+            $filter = $filterList | Out-GridView -Title "Select Update type you want the report for" -OutputMode Single | % { "PolicyId eq '$($_.PolicyId)'" }
             Write-Verbose "Filter will be: $filter"
         }
         #endregion prepare filter for FeatureUpdateDeviceState report if not available
@@ -174,7 +174,7 @@
         #endregion request the report
 
         #region wait for generating of the report to finish
-        Write-Warning "Waiting for generating of the report to finish"
+        Write-Warning "Waiting for the report to finish generating"
         do {
             $export = Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$($result.id)')" -Method Get
 
