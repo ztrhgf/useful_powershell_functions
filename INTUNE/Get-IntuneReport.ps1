@@ -103,7 +103,6 @@
         Start-Sleep 1
     } while ($export.status -eq "inProgress")
     #endregion generate report
-
     #region download generated report
     if ($export.status -eq "completed") {
         $originalFileName = $export.id + ".csv"
@@ -127,4 +126,75 @@
         throw "Export of $reportName failed.`n`n$export"
     }
     #endregion download generated report
+}           $filter = $filterList | Out-GridView -Title "Select Update type you want the report for" -OutputMode Single | % { "PolicyId eq '$($_.PolicyId)'" }
+            Write-Verbose "Filter will be: $filter"
+        }
+        #endregion prepare filter for FeatureUpdateDeviceState report if not available
+
+        #region prepare filter for DeviceInstallStatusByApp/UserInstallStatusAggregateByApp report if not available
+        if ($reportName -in ('DeviceInstallStatusByApp', 'UserInstallStatusAggregateByApp') -and (!$filter -or $filter -notmatch "^PolicyId eq ")) {
+            Write-Warning "Report $reportName requires filter in form: `"ApplicationId eq '<someApplicationId>'`""
+            # get list of all available applications
+            $allApps = (Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$filter=(microsoft.graph.managedApp/appAvailability%20eq%20null%20or%20microsoft.graph.managedApp/appAvailability%20eq%20%27lineOfBusiness%27%20or%20isAssigned%20eq%20true)&`$orderby=displayName&" -Method Get).Value | select displayName, isAssigned, productVersion, id
+
+            $filter = $allApps | Out-GridView -Title "Select Application you want the report for" -OutputMode Single | % { "ApplicationId eq '$($_.Id)'" }
+            Write-Verbose "Filter will be: $filter"
+        }
+        #endregion prepare filter for DeviceInstallStatusByApp/UserInstallStatusAggregateByApp report if not available
+    }
+
+    process {
+        #region request the report
+        $body = @{
+            reportName = $reportName
+            format     = "csv"
+            # select     = 'PolicyId', 'PolicyName', 'DeviceId'
+        }
+        if ($filter) { $body.filter = $filter }
+        Write-Warning "Requesting the report $reportName"
+        try {
+            $result = Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs" -Body $body -Method Post
+        } catch {
+            switch ($_) {
+                ($_ -like "*(400) Bad Request*") { throw "Faulty request. There has to be some mistake in this request" }
+                ($_ -like "*(401) Unauthorized*") { throw "Unauthorized request (try different credentials?)" }
+                ($_ -like "*Forbidden*") { throw "Forbidden access. Use account with correct API permissions for this request" }
+                default { throw $_ }
+            }
+        }
+        #endregion request the report
+
+        #region wait for generating of the report to finish
+        Write-Warning "Waiting for generating of the report to finish"
+        do {
+            $export = Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceManagement/reports/exportJobs('$($result.id)')" -Method Get
+
+            Start-Sleep 1
+        } while ($export.status -eq "inProgress")
+        #endregion wait for generating of the report to finish
+
+        #region download generated report
+        if ($export.status -eq "completed") {
+            $originalFileName = $export.id + ".csv"
+            $reportArchive = Join-Path $exportPath "$reportName`_$(Get-Date -Format dd-MM-HH-ss).zip"
+            Write-Warning "Downloading the report to $reportArchive"
+            $null = Invoke-WebRequest -Uri $export.url -Method Get -OutFile $reportArchive
+
+            if ($asObject) {
+                Write-Warning "Expanding $reportArchive to $env:TEMP"
+                Expand-Archive $reportArchive -DestinationPath $env:TEMP -Force
+
+                $reportCsv = Join-Path $env:TEMP $originalFileName
+                Write-Warning "Importing $reportCsv"
+                Import-Csv $reportCsv
+
+                # delete zip and also extracted csv files
+                Write-Warning "Removing zip and csv files"
+                Remove-Item $reportArchive, $reportCsv -Force
+            }
+        } else {
+            throw "Export of $reportName failed.`n`n$export"
+        }
+        #endregion download generated report
+    }
 }
