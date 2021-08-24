@@ -52,22 +52,24 @@ $buttonSetPIN_Click = {
 		param ([int] $pin)
 
 		$splittedPin = ($pin -split "") | ? { $_ } # split adds empty element on start and end
+
 		[int] $firstNumber = $splittedPin[0]
+		[int] $lastNumber = $splittedPin[-1]
+
 		[int] $sameNumberCount = 0
 
-		[int] $lastNumber = $splittedPin[-1]
 		[int] $increasedNumber = $decreasedNumber = $firstNumber
 
 		$splittedPin | % {
 			if ($_ -eq $increasedNumber) {
 				++$increasedNumber
 			} else {
-				$increasedNumber = $null
+				++$notIncreasedNumberRow
 			}
 			if ($_ -eq $decreasedNumber) {
 				--$decreasedNumber
 			} else {
-				$decreasedNumber = $null
+				++$notDecreasedNumberRow
 			}
 
 			if ($_ -match $firstNumber) { ++$sameNumberCount }
@@ -77,19 +79,21 @@ $buttonSetPIN_Click = {
 			return "PIN is row of the same number"
 		}
 
-		if ($increasedNumber -eq ($lastNumber + 1)) {
+		if (!$notIncreasedNumberRow -and $increasedNumber -eq ($lastNumber + 1)) {
 			return "PIN is increasing row of numbers"
 		}
 
-		if ($decreasedNumber -eq ($lastNumber - 1)) {
+		if (!$notDecreasedNumberRow -and $decreasedNumber -eq ($lastNumber - 1)) {
 			return "PIN is decreasing row of numbers"
 		}
 	}
 
 	$pinError = _CheckPinComplexity $textboxNewPin.Text
-
 	if ($pinError) {
 		$labelPINIsNotEqual.Text = $pinError
+		$labelPINIsNotEqual.Visible = $true
+	} elseif ($textboxNewPin.Text -notmatch "^\d+$") {
+		$labelPINIsNotEqual.Text = "PIN has to be numerical!"
 		$labelPINIsNotEqual.Visible = $true
 	} elseif ($textboxNewPin.Text.Length -eq 0 -or ($textboxNewPin.Text.Length -gt 0 -and $textboxNewPin.Text.Length -lt $global:MinimumPIN)) {
 		$labelPINIsNotEqual.Text = "PIN is not long enough"
