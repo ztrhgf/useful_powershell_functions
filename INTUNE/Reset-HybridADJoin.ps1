@@ -67,7 +67,7 @@
             Write-Verbose "by running: Get-ScheduledTask -TaskName Automatic-Device-Join | Start-ScheduledTask"
             Get-ScheduledTask -TaskName "Automatic-Device-Join" | Start-ScheduledTask
             while ((Get-ScheduledTask "Automatic-Device-Join" -ErrorAction silentlyContinue).state -ne "Ready") {
-                Start-Sleep -Milliseconds 1000
+                Start-Sleep 1
                 "Waiting for sched. task 'Automatic-Device-Join' to complete"
             }
 
@@ -75,18 +75,13 @@
             "Waiting for certificate creation"
             $i = 30
             Write-Verbose "two certificates should be created in Computer Personal cert. store (issuer: MS-Organization-Access, MS-Organization-P2P-Access [$(Get-Date -Format yyyy)]"
+
+            Start-Sleep 3
+
             while (!($hybridJoinCert = Get-ChildItem 'Cert:\LocalMachine\My\' | ? { $_.Issuer -match "MS-Organization-Access|MS-Organization-P2P-Access \[\d+\]" }) -and $i -gt 0) {
-                Start-Sleep 1
+                Start-Sleep 3
                 --$i
                 $i
-            }
-
-            if (!$hybridJoinCert) {
-                throw "Certificates weren't created. Is $env:COMPUTERNAME synced to AzureAD?"
-            }
-
-            if ($hybridJoinCert.count -eq 2) {
-                ++$twoHybridJoinCert
             }
 
             # check AzureAd join status
@@ -95,7 +90,7 @@
                 ++$AzureAdJoined
             }
 
-            if ($twoHybridJoinCert -and $AzureAdJoined) {
+            if ($hybridJoinCert -and $AzureAdJoined) {
                 "$env:COMPUTERNAME was successfully joined to AAD again. Now you should restart it and run Start-AzureADSync"
             } else {
                 $problem = @()
@@ -104,7 +99,7 @@
                     $problem += " - computer is not AzureAD joined"
                 }
 
-                if (!$twoHybridJoinCert) {
+                if (!$hybridJoinCert) {
                     $problem += " - certificates weren't created"
                 }
 
