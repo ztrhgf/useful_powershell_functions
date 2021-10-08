@@ -763,7 +763,13 @@ Invoke-AsLoggedUser -ScriptBlock `$scriptblock $VerboseParam $ReturnTranscriptPa
         if ($ReturnTranscript) {
             # return just interesting part of transcript
             if (Test-Path $TranscriptPath) {
-                (((Get-Content $TranscriptPath -Raw) -Split [regex]::escape('**********************'))[2] -split "`n" | Select-Object -Skip 2 | Select-Object -SkipLast 3) -join "`n"
+                $transcriptContent = (Get-Content $TranscriptPath -Raw) -Split [regex]::escape('**********************')
+                # return user name, under which command was run
+                $runUnder = $transcriptContent[1] -split "`n" | ? { $_ -match "Username: " } | % { ($_ -replace "Username: ").trim() }
+                Write-Warning "Command run under: $runUnder"
+                # return command output
+                ($transcriptContent[2] -split "`n" | Select-Object -Skip 2 | Select-Object -SkipLast 3) -join "`n"
+
                 Remove-Item (Split-Path $TranscriptPath -Parent) -Recurse -Force
             } else {
                 Write-Warning "There is no transcript, command probably failed!"
@@ -783,6 +789,7 @@ Invoke-AsLoggedUser -ScriptBlock `$scriptblock $VerboseParam $ReturnTranscriptPa
 
             if ($ReturnTranscript) {
                 # modify scriptBlock to contain creation of transcript
+                #TODO pro kazdeho uzivatele samostatny transcript a pak je vsechny zobrazit
                 $TranscriptStart = "Start-Transcript $TranscriptPath -Append" # append because code can run under more than one user at a time
                 $TranscriptEnd = 'Stop-Transcript'
             }
