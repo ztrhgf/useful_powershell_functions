@@ -32,8 +32,16 @@
         }
     }
 
+    $allFunctionDefs = "function Invoke-AsSystem { ${function:Invoke-AsSystem} }"
+
     $scriptBlock = {
+        param ($allFunctionDefs)
+
         try {
+            foreach ($functionDef in $allFunctionDefs) {
+                . ([ScriptBlock]::Create($functionDef))
+            }
+
             Write-Host "Checking for MDM certificate in computer certificate store"
 
             # Check&Delete MDM device certificate
@@ -106,7 +114,8 @@
     }
 
     $param = @{
-        scriptBlock = $scriptBlock
+        scriptBlock  = $scriptBlock
+        argumentList = $allFunctionDefs
     }
 
     if ($computerName -and $computerName -notin "localhost", $env:COMPUTERNAME) {
