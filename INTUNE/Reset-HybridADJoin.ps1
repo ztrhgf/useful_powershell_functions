@@ -70,6 +70,9 @@
                 Start-Sleep 1
                 "Waiting for sched. task 'Automatic-Device-Join' to complete"
             }
+            if ((Get-ScheduledTask -TaskName "Automatic-Device-Join" | Get-ScheduledTaskInfo | select -exp LastTaskResult) -ne 0) {
+                throw "Sched. task Automatic-Device-Join failed. Is $env:COMPUTERNAME synchronized to AzureAD?"
+            }
 
             # check certificates
             "Waiting for certificate creation"
