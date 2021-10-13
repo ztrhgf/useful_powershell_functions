@@ -1,4 +1,4 @@
-﻿function Reset-IntuneJoin {
+﻿function Reset-IntuneEnrollment {
     <#
     .SYNOPSIS
     Function for resetting device Intune management connection.
@@ -16,7 +16,7 @@
     (optional) Name of the computer.
 
     .EXAMPLE
-    Reset-IntuneJoin
+    Reset-IntuneEnrollment
 
     .NOTES
     # How MDM (Intune) enrollment works https://techcommunity.microsoft.com/t5/intune-customer-success/support-tip-understanding-auto-enrollment-in-a-co-managed/ba-p/834780
