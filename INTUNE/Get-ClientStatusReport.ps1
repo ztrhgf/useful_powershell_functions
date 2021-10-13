@@ -57,7 +57,7 @@ function Get-ClientStatusReport {
 
     [CmdletBinding()]
     param (
-        $computer = (Get-ADComputer -Filter "enabled -eq 'True'" -Properties sid, ObjectGUID, description, LastLogonDate | ? { $_.LastLogonDate -ge [datetime]::Today.AddDays(-$activeBeforeThreshold) }),
+        $computer,
 
         [string[]] $combineDataFrom = ('Intune', 'SCCM', 'AAD', 'AD'),
 
@@ -76,6 +76,11 @@ function Get-ClientStatusReport {
 
         [int] $installedOSThreshold
     )
+
+    if (!$computer) {
+        # unable to use in param block because of missing activeBeforeThreshold
+        $computer = (Get-ADComputer -Filter "enabled -eq 'True'" -Properties sid, ObjectGUID, description, LastLogonDate | ? { $_.LastLogonDate -ge [datetime]::Today.AddDays(-$activeBeforeThreshold) })
+    }
 
     $ErrorActionPreference = "Stop"
 
