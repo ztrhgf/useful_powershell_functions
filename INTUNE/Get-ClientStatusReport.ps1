@@ -77,12 +77,12 @@ function Get-ClientStatusReport {
         [int] $installedOSThreshold
     )
 
+    $ErrorActionPreference = "Stop"
+
     if (!$computer) {
         # unable to use in param block because of missing activeBeforeThreshold
         $computer = (Get-ADComputer -Filter "enabled -eq 'True'" -Properties sid, ObjectGUID, description, LastLogonDate | ? { $_.LastLogonDate -ge [datetime]::Today.AddDays(-$activeBeforeThreshold) })
     }
-
-    $ErrorActionPreference = "Stop"
 
     Write-Host "`n`n#####################################################################################" -BackgroundColor DarkGreen
     Write-Host "# Enabled AD computers that contacted domain in last $activeBeforeThreshold days are checked #" -BackgroundColor DarkGreen
