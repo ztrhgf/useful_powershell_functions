@@ -711,7 +711,7 @@
         Invoke-Command @param
     }
 
-    function Get-IntuneJoinStatus {
+    function Get-IntuneEnrollmentStatus {
         <#
         .SYNOPSIS
         Function for checking whether computer is managed by Intune (fulfill all requirements).
@@ -735,17 +735,17 @@
         Switch for checking Intune part too (if device is listed there).
 
         .EXAMPLE
-        Get-IntuneJoinStatus
+        Get-IntuneEnrollmentStatus
 
         Check Intune status on local computer.
 
         .EXAMPLE
-        Get-IntuneJoinStatus -computerName ae-50-pc
+        Get-IntuneEnrollmentStatus -computerName ae-50-pc
 
         Check Intune status on computer ae-50-pc.
 
         .EXAMPLE
-        Get-IntuneJoinStatus -computerName ae-50-pc -checkIntuneToo
+        Get-IntuneEnrollmentStatus -computerName ae-50-pc -checkIntuneToo
 
         Check Intune status on computer ae-50-pc, plus connects to Intune and check whether ae-50-pc exists there.
         #>
@@ -901,7 +901,7 @@
     #endregion helper functions
 
     Write-Host "Checking actual Intune connection status" -ForegroundColor Cyan
-    if (Get-IntuneJoinStatus -computerName $computerName) {
+    if (Get-IntuneEnrollmentStatus -computerName $computerName) {
         $choice = ""
         while ($choice -notmatch "^[Y|N]$") {
             $choice = Read-Host "It seems device has working Intune connection. Continue? (Y|N)"
