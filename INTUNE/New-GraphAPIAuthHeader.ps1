@@ -1,4 +1,4 @@
-﻿function New-IntuneAuthHeader {
+﻿function New-GraphAPIAuthHeader {
     <#
     .SYNOPSIS
     Function for generating header that can be used for authentication of Graph API requests.
@@ -12,10 +12,8 @@
     .PARAMETER TenantDomainName
     Name of your Azure tenant.
 
-    <yourtenantdomain>.onmicrosoft.com
-
     .EXAMPLE
-    $header = New-IntuneAuthHeader -credential $cred
+    $header = New-GraphAPIAuthHeader -credential $cred
     $URI = 'https://graph.microsoft.com/v1.0/deviceManagement/managedDevices/'
     $managedDevices = (Invoke-RestMethod -Headers $header -Uri $URI -Method Get).value
 
@@ -26,15 +24,15 @@
     #>
 
     [CmdletBinding()]
-    [Alias("Get-IntuneAuthHeader")]
+    [Alias("New-IntuneAuthHeader", "Get-IntuneAuthHeader")]
     param (
         [System.Management.Automation.PSCredential] $credential = (Get-Credential -Message "Enter AppID as UserName and AppSecret as Password"),
 
         [ValidateNotNullOrEmpty()]
-        $tenantDomainName
+        $tenantDomainName = $_tenantDomain
     )
 
-    if (!$credential) { throw "Credential is missing" }
+    if (!$credential) { throw "Credentials for creating Graph API authentication header is missing" }
 
     if (!$tenantDomainName) { throw "TenantDomainName is missing" }
 
