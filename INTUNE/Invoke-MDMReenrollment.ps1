@@ -11,19 +11,34 @@
      - remove Intune scheduled tasks & registry keys
      - force re-enrollment via DeviceEnroller.exe
 
+    .PARAMETER computerName
+    (optional) Name of the remote computer, which you want to re-enroll.
+
+    .PARAMETER asSystem
+    Switch for invoking re-enroll as a SYSTEM instead of logged user.
+
     .EXAMPLE
     Invoke-MDMReenrollment
+
+    Invoking re-enroll to Intune on local computer under logged user.
+
+    .EXAMPLE
+    Invoke-MDMReenrollment -computerName PC-01 -asSystem
+
+    Invoking re-enroll to Intune on computer PC-01 under SYSTEM account.
 
 	.NOTES
     https://www.maximerastello.com/manually-re-enroll-a-co-managed-or-hybrid-azure-ad-join-windows-10-pc-to-microsoft-intune-without-loosing-current-configuration/
 
-	Based on work of: MauriceDaly
+	Based on work of MauriceDaly.
     #>
 
     [Alias("Invoke-IntuneReenrollment")]
     [CmdletBinding()]
     param (
-        [string] $computerName
+        [string] $computerName,
+
+        [switch] $asSystem
     )
 
     if ($computerName -and $computerName -notin "localhost", $env:COMPUTERNAME) {
@@ -35,7 +50,7 @@
     $allFunctionDefs = "function Invoke-AsSystem { ${function:Invoke-AsSystem} }"
 
     $scriptBlock = {
-        param ($allFunctionDefs)
+        param ($allFunctionDefs, $asSystem)
 
         try {
             foreach ($functionDef in $allFunctionDefs) {
@@ -50,13 +65,11 @@
                 Remove-Item $_.PSPath
             }
 
-            Write-Host "Starting forced on-boarding process"
-
             # Obtain current management GUID from Task Scheduler
             $EnrollmentGUID = Get-ScheduledTask | Where-Object { $_.TaskPath -like "*Microsoft*Windows*EnterpriseMgmt\*" } | Select-Object -ExpandProperty TaskPath -Unique | Where-Object { $_ -like "*-*-*" } | Split-Path -Leaf
 
-            # Start clean up process
-            if (-not [string]::IsNullOrEmpty($EnrollmentGUID)) {
+            # Start cleanup process
+            if (![string]::IsNullOrEmpty($EnrollmentGUID)) {
                 Write-Host "Current enrollment GUID detected as $([string]$EnrollmentGUID)"
 
                 # Stop Intune Management Exention Agent and CCM Agent services
@@ -82,7 +95,7 @@
                     # Remove registry entries
                     if (Test-Path -Path $Key) {
                         # Search for and remove keys with matching GUID
-                        Write-Host " - GUID entry found against key $Key. Removing.."
+                        Write-Host " - GUID entry found in $Key. Removing..."
                         Get-ChildItem -Path $Key | Where-Object { $_.Name -match $EnrollmentGUID } | Remove-Item -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue
                     }
                 }
@@ -104,7 +117,11 @@
 
                 # Start re-enrollment process
                 Write-Host "Calling: DeviceEnroller.exe /C /AutoenrollMDM"
-                Invoke-AsSystem -runAs SYSTEM -scriptBlock { Start-Process -FilePath "$env:WINDIR\System32\DeviceEnroller.exe" -ArgumentList "/C /AutoenrollMDM" -NoNewWindow -Wait -PassThru }
+                if ($asSystem) {
+                    Invoke-AsSystem -runAs SYSTEM -scriptBlock { Start-Process -FilePath "$env:WINDIR\System32\DeviceEnroller.exe" -ArgumentList "/C /AutoenrollMDM" -NoNewWindow -Wait -PassThru }
+                } else {
+                    Start-Process -FilePath "$env:WINDIR\System32\DeviceEnroller.exe" -ArgumentList "/C /AutoenrollMDM" -NoNewWindow -Wait -PassThru
+                }
             } else {
                 throw "Unable to obtain enrollment GUID value from task scheduler. Aborting"
             }
@@ -115,7 +132,7 @@
 
     $param = @{
         scriptBlock  = $scriptBlock
-        argumentList = $allFunctionDefs
+        argumentList = $allFunctionDefs, $asSystem
     }
 
     if ($computerName -and $computerName -notin "localhost", $env:COMPUTERNAME) {
