@@ -950,7 +950,7 @@
     #endregion remove computer record in Intune
 
     Write-Host "Invoking re-enrollment of Intune connection" -ForegroundColor Cyan
-    Invoke-MDMReenrollment -computerName $computerName
+    Invoke-MDMReenrollment -computerName $computerName -asSystem
 
     # check certificates
     $i = 30
