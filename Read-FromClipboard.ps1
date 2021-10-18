@@ -132,7 +132,12 @@
         param ($d)
 
         if (!$regexDelimiter) {
-            [regex]::escape($d)
+            if ($d -match "^\s+$") {
+                # bug? [regex]::escape() transform space to \
+                $d
+            } else {
+                [regex]::escape($d)
+            }
         } else {
             $d
         }
