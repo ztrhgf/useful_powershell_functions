@@ -12,15 +12,15 @@
 
     By default "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html" is checked.
 
+    .PARAMETER omitKnobs
+    Switch for omitting knobs results from "Managed Policies" and "Enrolled configuration sources and target resources" tables.
+    Knobs seems to be just some power related diagnostic data.
+
     .EXAMPLE
     ConvertFrom-MDMDiagReport
 
-    Converts content of  "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html" (if it doesn't exists, generates and converts) to PowerShell object.
-
-    .NOTES
-    Author: Ondrej Sebela (ztrhgf@seznam.cz)
+    Converts content of "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html" (if it doesn't exists, generates first) to PowerShell object.
     #>
-
 
     [CmdletBinding()]
     param (
@@ -31,7 +31,9 @@
                     Throw "$_ is not a valid path to MDM html report"
                 }
             })]
-        [string] $MDMDiagReport = "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html"
+        [string] $MDMDiagReport = "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html",
+
+        [switch] $omitKnobs
     )
 
     if (!(Test-Path $MDMDiagReport -PathType Leaf)) {
@@ -39,77 +41,6 @@
         $MDMDiagReportFolder = Split-Path $MDMDiagReport -Parent
         Start-Process MdmDiagnosticsTool.exe -Wait -ArgumentList "-out `"$MDMDiagReportFolder`"" -NoNewWindow
     }
-
-    #region helper functions
-    function _convertFromHTMLTable {
-        param (
-            # expects object created by Invoke-WebRequest parsedHtml() or IHTMLDocument2_write() method
-            [System.__ComObject] $table,
-
-            [string] $tableName
-        )
-
-        $twoColumnsWithoutName = 0
-
-        if ($tableName) { $tableNameTxt = "'$tableName'" }
-
-        $columnName = $table.getElementsByTagName("th") | % { $_.innerText -replace "^\s*|\s*$" }
-        if (!$columnName) {
-            $numberOfColumns = @($table.getElementsByTagName("tr")[0].getElementsByTagName("td")).count
-            if ($numberOfColumns -eq 2) {
-                ++$twoColumnsWithoutName
-                Write-Verbose "Table $tableNameTxt has two columns without column names. Resultant object will use first column as objects property 'Name' and second as 'Value'"
-            } elseif ($numberOfColumns) {
-                Write-Warning "Table $tableNameTxt doesn't contain column names, numbers will be used instead"
-                $columnName = 1..$numberOfColumns
-            } else {
-                throw "Table $tableNameTxt doesn't contain column names and summarization of columns failed"
-            }
-        }
-
-        if ($twoColumnsWithoutName) {
-            # table has two columns without names
-            $property = [ordered]@{ }
-
-            $table.getElementsByTagName("tr") | % {
-                # read table per row and return object
-                $columnValue = $_.getElementsByTagName("td") | % { $_.innerText -replace "^\s*|\s*$" }
-                if ($columnValue) {
-                    # use first column value as object property 'Name' and second as a 'Value'
-                    $property.($columnValue[0]) = $columnValue[1]
-                } else {
-                    # row doesn't contain <td>
-                }
-            }
-            if ($tableName) {
-                $property.TableName = $tableName
-            }
-
-            New-Object -TypeName PSObject -Property $property
-        } else {
-            # table doesn't have two columns or they are named
-            $table.getElementsByTagName("tr") | % {
-                # read table per row and return object
-                $columnValue = $_.getElementsByTagName("td") | % { $_.innerText -replace "^\s*|\s*$" }
-                if ($columnValue) {
-                    $property = [ordered]@{ }
-                    $i = 0
-                    $columnName | % {
-                        $property.$_ = $columnValue[$i]
-                        ++$i
-                    }
-                    if ($tableName) {
-                        $property.TableName = $tableName
-                    }
-
-                    New-Object -TypeName PSObject -Property $property
-                } else {
-                    # row doesn't contain <td>, its probably row with column names
-                }
-            }
-        }
-    }
-    #endregion helper functions
 
     # hardcoded titles from MDMDiagReport.html report
     $MDMDiagReportTable = @{
@@ -134,7 +65,16 @@
     $HTML.body.getElementsByTagName('table') | % {
         $tableName = $MDMDiagReportTable.$tableOrder -replace " ", "_"
         if (!$tableName) { throw "Undefined tableName" }
-        $result.$tableName = _convertFromHTMLTable $_ -tableName $tableName
+
+        $result.$tableName = ConvertFrom-HTMLTable $_ -tableName $tableName
+
+        if ($omitKnobs -and $tableName -eq "Managed_Policies") {
+            $result.$tableName = $result.$tableName | ? { $_.Area -ne "knobs" }
+        } elseif ($omitKnobs -and $tableName -eq "Enrolled_configuration_sources_and_target_resources") {
+            # all provisioning sources have same are knobs
+            $result.$tableName = $result.$tableName | ? { $_.'Configuration source' -ne "Provisioning" }
+        }
+
         ++$tableOrder
     }
 
