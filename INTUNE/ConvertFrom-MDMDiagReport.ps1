@@ -12,9 +12,9 @@
 
     By default "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html" is checked.
 
-    .PARAMETER omitKnobs
-    Switch for omitting knobs results from "Managed Policies" and "Enrolled configuration sources and target resources" tables.
-    Knobs seems to be just some power related diagnostic data.
+    .PARAMETER showKnobs
+    Switch for including knobs results in "Managed Policies" and "Enrolled configuration sources and target resources" tables.
+    Knobs seems to be just some internal power related diagnostic data, therefore hidden by default.
 
     .EXAMPLE
     ConvertFrom-MDMDiagReport
@@ -33,7 +33,7 @@
             })]
         [string] $MDMDiagReport = "C:\Users\Public\Documents\MDMDiagnostics\MDMDiagReport.html",
 
-        [switch] $omitKnobs
+        [switch] $showKnobs
     )
 
     if (!(Test-Path $MDMDiagReport -PathType Leaf)) {
@@ -68,10 +68,10 @@
 
         $result.$tableName = ConvertFrom-HTMLTable $_ -tableName $tableName
 
-        if ($omitKnobs -and $tableName -eq "Managed_Policies") {
+        if ($tableName -eq "Managed_Policies" -and !$showKnobs) {
             $result.$tableName = $result.$tableName | ? { $_.Area -ne "knobs" }
-        } elseif ($omitKnobs -and $tableName -eq "Enrolled_configuration_sources_and_target_resources") {
-            # all provisioning sources have same are knobs
+        } elseif ($tableName -eq "Enrolled_configuration_sources_and_target_resources" -and !$showKnobs) {
+            # all provisioning sources are knobs
             $result.$tableName = $result.$tableName | ? { $_.'Configuration source' -ne "Provisioning" }
         }
 
