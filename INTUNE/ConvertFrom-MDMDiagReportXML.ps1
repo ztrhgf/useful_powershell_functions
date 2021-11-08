@@ -119,6 +119,28 @@
             return $false
         }
     }
+
+    function _translateStatus {
+        param ([int] $statusCode)
+
+        $statusMessage = ""
+
+        switch ($statusCode) {
+            '10' { $statusMessage = "Initialized" }
+            '20' { $statusMessage = "Download In Progress" }
+            '25' { $statusMessage = "Pending Download Retry" }
+            '30' { $statusMessage = "Download Failed" }
+            '40' { $statusMessage = "Download Completed" }
+            '48' { $statusMessage = "Pending User Session" }
+            '50' { $statusMessage = "Enforcement In Progress" }
+            '55' { $statusMessage = "Pending Enforcement Retry" }
+            '60' { $statusMessage = "Enforcement Failed" }
+            '70' { $statusMessage = "Enforcement Completed" }
+            default { $statusMessage = $statusCode }
+        }
+
+        return $statusMessage
+    }
     #endregion helper functions
 
     if ($showURLs) {
@@ -367,7 +389,7 @@
                             $property = [ordered]@{
                                 "SettingName"     = $settingName
                                 "Value"           = $settingValue
-                                "DefaultValue"    = '*unknown*'
+                                "DefaultValue"    = $null
                                 "PolicyType"      = '*unknown*'
                                 "RegKey"          = '*unknown*'
                                 "RegValueName"    = '*unknown*'
@@ -515,6 +537,7 @@
                 # define base object
                 $property = [ordered]@{
                     "Type"           = $type
+                    "Status"         = _translateStatus $_.Status
                     "PackageId"      = $_.PackageId -replace "{" -replace "}"
                     "ProductVersion" = $_.ProductVersion
                     "LastError"      = $_.LastError
