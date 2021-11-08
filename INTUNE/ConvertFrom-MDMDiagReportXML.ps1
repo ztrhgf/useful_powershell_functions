@@ -597,17 +597,13 @@
                         if (!$showEnrollmentIDs) { $excludeProperty += 'EnrollmentId' }
                         if (!$showURLs) { $excludeProperty += 'PolicyURL' }
                         $resultsWithoutSettings = $resultsWithoutSettings | Select-Object -Property * -exclude $excludeProperty
-                        # make PolicyURL link clickable
-                        if ($asHTML) {
-                            $resultsWithoutSettings = $resultsWithoutSettings | Select-Object -Property *, @{n = 'PolicyURL'; e = { if ($_.PolicyURL) { "<a href=`"$($_.PolicyURL)`" target=`"_blank`">link</a>" } else { $null } } } -ExcludeProperty 'PolicyURL'
-                        }
                         # sort
                         $resultsWithoutSettings = $resultsWithoutSettings | Sort-Object -Property Scope
                         #endregion prepare data
 
                         # render policies
                         New-HTMLSection -HeaderText 'Policy' -HeaderBackGroundColor Wedgewood -BackgroundColor White {
-                            New-HTMLTable -DataTable $resultsWithoutSettings -InvokeHTMLTags -WordBreak 'break-all' -DisableInfo -HideButtons -DisablePaging -FixedHeader -FixedFooter
+                            New-HTMLTable -DataTable $resultsWithoutSettings -WordBreak 'break-all' -DisableInfo -HideButtons -DisablePaging -FixedHeader -FixedFooter
                         }
                     }
                 }
@@ -629,31 +625,16 @@
                             }
 
                             $policy = $policy | Select-Object -Property * -ExcludeProperty $excludeProperty
-
-                            # make PolicyURL link clickable
-                            if ($asHTML) {
-                                $policy = $policy | Select-Object -Property *, @{n = 'PolicyURL'; e = { if ($policy.PolicyURL) { "<a href=`"$($policy.PolicyURL)`" target=`"_blank`">link</a>" } else { $null } } } -ExcludeProperty 'PolicyURL'
-                            }
                             #endregion prepare data
 
                             New-HTMLSection -HeaderText $policy.PolicyName -HeaderTextAlignment left -CanCollapse -BackgroundColor White -HeaderBackGroundColor White -HeaderTextSize 12 -HeaderTextColor EgyptianBlue {
                                 # render main policy
                                 New-HTMLSection -HeaderText 'Policy' -HeaderBackGroundColor Wedgewood -BackgroundColor White {
-                                    New-HTMLTable -DataTable $policy -InvokeHTMLTags -WordBreak 'break-all' -HideFooter -DisableInfo -HideButtons -DisablePaging -DisableSearch -DisableOrdering
+                                    New-HTMLTable -DataTable $policy -WordBreak 'break-all' -HideFooter -DisableInfo -HideButtons -DisablePaging -DisableSearch -DisableOrdering
                                 }
 
                                 # render policy settings details
                                 if ($policySetting) {
-
-                                    # make PolicyDetailsURL link clickable
-                                    $policySetting = $policySetting | % {
-                                        if ($_.PolicyDetailsURL) {
-                                            $_.PolicyDetailsURL = "<a href=`"$($_.PolicyDetailsURL)`" target=`"_blank`">link</a>"
-                                        }
-
-                                        $_
-                                    }
-
                                     if (@($policySetting).count -eq 1) {
                                         $detailsHTMLTableParam = @{
                                             DisableSearch   = $true
@@ -663,7 +644,7 @@
                                         $detailsHTMLTableParam = @{}
                                     }
                                     New-HTMLSection -HeaderText 'Policy settings' -HeaderBackGroundColor PictonBlue -BackgroundColor White {
-                                        New-HTMLTable @detailsHTMLTableParam -DataTable $policySetting -InvokeHTMLTags -WordBreak 'break-all' -AllProperties -FixedHeader -HideFooter -DisableInfo -HideButtons -DisablePaging -WarningAction SilentlyContinue {
+                                        New-HTMLTable @detailsHTMLTableParam -DataTable $policySetting -WordBreak 'break-all' -AllProperties -FixedHeader -HideFooter -DisableInfo -HideButtons -DisablePaging -WarningAction SilentlyContinue {
                                             New-HTMLTableCondition -Name 'WinningProvider' -ComparisonType string -Operator 'ne' -Value 'Intune' -BackgroundColor Red -Color White #-Row
                                             New-HTMLTableCondition -Name 'LastError' -ComparisonType number -Operator 'ne' -Value 0 -BackgroundColor Red -Color White # -Row
                                             New-HTMLTableCondition -Name 'Error' -ComparisonType number -Operator 'ne' -Value 0 -BackgroundColor Red -Color White # -Row
