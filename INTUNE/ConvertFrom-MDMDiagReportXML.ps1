@@ -523,14 +523,14 @@
     #endregion policies
 
     #region installations
-    Write-Verbose "Getting MSI installations (MDMEnterpriseDiagnosticsReport.EnterpriseDesktopAppManagementinfo.MsiInstallations.TargetedUser.Package)"
-    $installation = $xml.MDMEnterpriseDiagnosticsReport.EnterpriseDesktopAppManagementinfo.MsiInstallations.TargetedUser.Package | % { ConvertFrom-XML $_ }
+    Write-Verbose "Getting MSI installations (MDMEnterpriseDiagnosticsReport.EnterpriseDesktopAppManagementinfo.MsiInstallations)"
+    $installation = $xml.MDMEnterpriseDiagnosticsReport.EnterpriseDesktopAppManagementinfo.MsiInstallations | % { ConvertFrom-XML $_ }
     if ($installation) {
         Write-Verbose "Processing MSI installations"
 
         $settingDetails = @()
 
-        $installation | % {
+        $installation.TargetedUser | % {
             <#
             <MsiInstallations>
                 <TargetedUser>
@@ -561,14 +561,18 @@
                     <ServerAccountID>11120759-7CE3-4683-FB59-46C27FF40D35</ServerAccountID>
                     </Details>
             #>
-            $type = $_.type
-            $details = $_.details
+
+            $scope = $_.UserSid
+            if ($scope -eq 'S-0-0-00-0000000000-0000000000-000000000-000') { $scope = 'Device' }
+            $type = $_.Package.Type
+            $details = $_.Package.details
 
             $details | % {
                 Write-Verbose "`t$($_.PackageId) of type $type"
 
                 # define base object
                 $property = [ordered]@{
+                    "Scope"          = $scope
                     "Type"           = $type
                     "Status"         = _translateStatus $_.Status
                     "LastError"      = $_.LastError
@@ -584,10 +588,9 @@
 
         #region return retrieved data
         $property = [ordered] @{
-            #FIXME UserSid S-0-0-00-0000000000-0000000000-000000000-000 is device scope, otherwise it is a user!
-            Scope          = 'Device' # made up!
+            Scope          = $null
             PolicyName     = "SoftwareInstallation" # made up!
-            SettingName    = "MSI" # made up!
+            SettingName    = $null
             SettingDetails = $settingDetails
         }
         if ($showEnrollmentIDs) { $property.EnrollmentId = $null }
