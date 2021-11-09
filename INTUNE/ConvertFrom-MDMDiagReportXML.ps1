@@ -26,7 +26,9 @@
     From my point of view its useless :).
 
     .PARAMETER showURLs
-    Switch for adding PolicyURL and PolicySettingsURL properties i.e. properties containing URL with Microsoft documentation to given CSP.
+    Switch for adding PolicyURL and PolicySettingsURL properties i.e. properties containing URL with Microsoft documentation for given CSP.
+
+    Make running the function slower! Because I test each URL and shows just existing ones.
 
     .EXAMPLE
     $intuneReport = ConvertFrom-MDMDiagReportXML
@@ -312,7 +314,7 @@
 
         # get policies metadata
         Write-Verbose "Getting Policies Area metadata (MDMEnterpriseDiagnosticsReport.PolicyManager.AreaMetadata)"
-        $policyAreaNameMetadata = $xml.MDMEnterpriseDiagnosticsReport.PolicyManager.AreaMetadata | % { ConvertFrom-XML $_ }
+        $policyAreaNameMetadata = $xml.MDMEnterpriseDiagnosticsReport.PolicyManager.AreaMetadata
         # get admx policies metadata
         # there are duplicities, so pick just last one
         Write-Verbose "Getting Policies ADMX metadata (MDMEnterpriseDiagnosticsReport.PolicyManager.IngestedAdmxPolicyMetadata)"
@@ -529,19 +531,52 @@
         $settingDetails = @()
 
         $installation | % {
+            <#
+            <MsiInstallations>
+                <TargetedUser>
+                <UserSid>S-0-0-00-0000000000-0000000000-000000000-000</UserSid>
+                <Package>
+                    <Type>MSI</Type>
+                    <Details>
+                    <PackageId>{23170F69-40C1-2702-1900-000001000000}</PackageId>
+                    <DownloadInstall>Ready</DownloadInstall>
+                    <ProductCode>{23170F69-40C1-2702-1900-000001000000}</ProductCode>
+                    <ProductVersion>19.00.00.0</ProductVersion>
+                    <ActionType>1</ActionType>
+                    <Status>70</Status>
+                    <JobStatusReport>1</JobStatusReport>
+                    <LastError>0</LastError>
+                    <BITSJobId></BITSJobId>
+                    <DownloadLocation></DownloadLocation>
+                    <CurrentDownloadUrlIndex>0</CurrentDownloadUrlIndex>
+                    <CurrentDownloadUrl></CurrentDownloadUrl>
+                    <FileHash>A7803233EEDB6A4B59B3024CCF9292A6FFFB94507DC998AA67C5B745D197A5DC</FileHash>
+                    <CommandLine>ALLUSERS=1</CommandLine>
+                    <AssignmentType>1</AssignmentType>
+                    <EnforcementTimeout>30</EnforcementTimeout>
+                    <EnforcementRetryIndex>0</EnforcementRetryIndex>
+                    <EnforcementRetryCount>5</EnforcementRetryCount>
+                    <EnforcementRetryInterval>3</EnforcementRetryInterval>
+                    <LocURI>./Device/Vendor/MSFT/EnterpriseDesktopAppManagement/MSI/{23170F69-40C1-2702-1900-000001000000}/DownloadInstall</LocURI>
+                    <ServerAccountID>11120759-7CE3-4683-FB59-46C27FF40D35</ServerAccountID>
+                    </Details>
+            #>
             $type = $_.type
             $details = $_.details
 
             $details | % {
                 Write-Verbose "`t$($_.PackageId) of type $type"
+
                 # define base object
                 $property = [ordered]@{
                     "Type"           = $type
                     "Status"         = _translateStatus $_.Status
+                    "LastError"      = $_.LastError
                     "PackageId"      = $_.PackageId -replace "{" -replace "}"
                     "ProductVersion" = $_.ProductVersion
-                    "LastError"      = $_.LastError
                     "CommandLine"    = $_.CommandLine
+                    "RetryIndex"     = $_.EnforcementRetryIndex
+                    "MaxRetryCount"  = $_.EnforcementRetryCount
                 }
                 $settingDetails += New-Object -TypeName PSObject -Property $property
             }
@@ -549,6 +584,7 @@
 
         #region return retrieved data
         $property = [ordered] @{
+            #FIXME UserSid S-0-0-00-0000000000-0000000000-000000000-000 is device scope, otherwise it is a user!
             Scope          = 'Device' # made up!
             PolicyName     = "SoftwareInstallation" # made up!
             SettingName    = "MSI" # made up!
@@ -660,6 +696,6 @@
                 }
             } # end of main HTML section
         }
-        #endregion convert results to HTML and output
     }
+    #endregion convert results to HTML and output
 }
