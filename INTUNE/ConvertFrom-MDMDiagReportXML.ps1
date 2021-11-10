@@ -576,11 +576,11 @@
                     "Type"           = $type
                     "Status"         = _translateStatus $_.Status
                     "LastError"      = $_.LastError
-                    "PackageId"      = $_.PackageId -replace "{" -replace "}"
                     "ProductVersion" = $_.ProductVersion
                     "CommandLine"    = $_.CommandLine
                     "RetryIndex"     = $_.EnforcementRetryIndex
                     "MaxRetryCount"  = $_.EnforcementRetryCount
+                    "PackageId"      = $_.PackageId -replace "{" -replace "}"
                 }
                 $settingDetails += New-Object -TypeName PSObject -Property $property
             }
