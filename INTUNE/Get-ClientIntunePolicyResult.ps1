@@ -939,7 +939,6 @@
                     # "Status"            = $complianceStateMessage.ComplianceState
                     "ProductVersion"     = $complianceStateMessage.ProductVersion
                     "LastError"          = $lastError
-                    "IntuneWin32AppURL"  = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_Apps/SettingsMenu/0/appId/$win32AppID"
                 }
             } else {
                 # no 'DisplayName' property
@@ -951,8 +950,11 @@
                     # "Status"            = $complianceStateMessage.ComplianceState
                     "ProductVersion"     = $complianceStateMessage.ProductVersion
                     "LastError"          = $lastError
-                    "IntuneWin32AppURL"  = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_Apps/SettingsMenu/0/appId/$win32AppID"
                 }
+            }
+
+            if ($showURLs) {
+                $property.IntuneWin32AppURL = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_Apps/SettingsMenu/0/appId/$win32AppID"
             }
 
             New-Object -TypeName PSObject -Property $property
@@ -960,15 +962,18 @@
     }
 
     if ($settingDetails) {
-        $win32AppObject = [PSCustomObject]@{
+        $property = [ordered]@{
             "Scope"          = $null # scope is specified at the particular items level
             "PolicyName"     = 'SoftwareInstallation Win32App' # my custom made
             # SettingName    = 'Win32App' # my custom made
             "SettingDetails" = $settingDetails
-            "PolicyURL"      = $null
         }
 
-        $intuneXMLReport += $win32AppObject
+        if ($showURLs) {
+            $property.PolicyURL = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/AppsWindowsMenu/windowsApps"
+        }
+
+        $intuneXMLReport += New-Object -TypeName PSObject -Property $property
     }
     #endregion Win32App
 
@@ -1011,7 +1016,6 @@
                     "LastUpdatedTimeUtc"      = $scriptRegData.LastUpdatedTimeUtc
                     "RunAsAccount"            = $scriptRegData.RunAsAccount
                     "ResultDetails"           = $resultDetails
-                    "IntuneScriptURL"         = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/ConfigureWMPolicyMenuBlade/properties/policyId/$scriptID/policyType/0"
                 }
             } else {
                 # no 'DisplayName' property
@@ -1025,8 +1029,11 @@
                     "LastUpdatedTimeUtc"      = $scriptRegData.LastUpdatedTimeUtc
                     "RunAsAccount"            = $scriptRegData.RunAsAccount
                     "ResultDetails"           = $resultDetails
-                    "IntuneScriptURL"         = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/ConfigureWMPolicyMenuBlade/properties/policyId/$scriptID/policyType/0"
                 }
+            }
+
+            if ($showURLs) {
+                $property.IntuneScriptURL = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/ConfigureWMPolicyMenuBlade/properties/policyId/$scriptID/policyType/0"
             }
 
             New-Object -TypeName PSObject -Property $property
@@ -1034,15 +1041,18 @@
     }
 
     if ($settingDetails) {
-        $scriptObject = [PSCustomObject]@{
+        $property = [ordered]@{
             "Scope"          = $null # scope is specified at the particular items level
             "PolicyName"     = 'Script' # my custom made
             "SettingName"    = $null
             "SettingDetails" = $settingDetails
-            "PolicyURL"      = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/DevicesMenu/powershell"
         }
 
-        $intuneXMLReport += $scriptObject
+        if ($showURLs) {
+            $property.PolicyURL = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_DeviceSettings/DevicesMenu/powershell"
+        }
+
+        $intuneXMLReport += New-Object -TypeName PSObject -Property $property
     }
     #endregion add Scripts section
 
@@ -1118,15 +1128,18 @@
     }
 
     if ($settingDetails) {
-        $remediationScriptObject = [PSCustomObject]@{
+        $property = [ordered]@{
             "Scope"          = $null # scope is specified at the particular items level
             "PolicyName"     = 'RemediationScript' # my custom made
             "SettingName"    = $null # my custom made
             "SettingDetails" = $settingDetails
-            "PolicyURL"      = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_Enrollment/UXAnalyticsMenu/proactiveRemediations"
         }
 
-        $intuneXMLReport += $remediationScriptObject
+        if ($showURLs) {
+            $property.PolicyURL = "https://endpoint.microsoft.com/#blade/Microsoft_Intune_Enrollment/UXAnalyticsMenu/proactiveRemediations"
+        }
+
+        $intuneXMLReport += New-Object -TypeName PSObject -Property $property
     }
     #endregion remediation script
 
@@ -1184,11 +1197,9 @@
                             # exclude some not significant or needed properties
                             # SettingName is useless in HTML report from my point of view
                             # settingDetails will be shown in separate table, omit here
-                            if ($showEnrollmentIDs) {
-                                $excludeProperty = 'SettingName', 'SettingDetails'
-                            } else {
-                                $excludeProperty = 'SettingName', 'SettingDetails', 'EnrollmentId'
-                            }
+                            $excludeProperty = @('SettingName', 'SettingDetails')
+                            if (!$showEnrollmentIDs) { $excludeProperty += 'EnrollmentId' }
+                            if (!$showURLs) { $excludeProperty += 'PolicyURL' }
 
                             $policy = $policy | Select-Object -Property * -ExcludeProperty $excludeProperty
                             #endregion prepare data
