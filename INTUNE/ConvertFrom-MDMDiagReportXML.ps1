@@ -318,7 +318,7 @@
         # get admx policies metadata
         # there are duplicities, so pick just last one
         Write-Verbose "Getting Policies ADMX metadata (MDMEnterpriseDiagnosticsReport.PolicyManager.IngestedAdmxPolicyMetadata)"
-        $admxPolicyAreaNameMetadata = $xml.MDMEnterpriseDiagnosticsReport.PolicyManager.IngestedAdmxPolicyMetadata | Select-Object -Last 1 | % { ConvertFrom-XML $_ }
+        $admxPolicyAreaNameMetadata = $xml.MDMEnterpriseDiagnosticsReport.PolicyManager.IngestedAdmxPolicyMetadata | % { ConvertFrom-XML $_ }
 
         Write-Verbose "Getting Policies winning provider (MDMEnterpriseDiagnosticsReport.PolicyManager.CurrentPolicies.CurrentPolicyValues)"
         $winningProviderPolicyAreaNameMetadata = $xml.MDMEnterpriseDiagnosticsReport.PolicyManager.CurrentPolicies.CurrentPolicyValues | % {
@@ -441,7 +441,7 @@
                                             <AdmxMetadataDevice>30313D0100000000323D000000000000</AdmxMetadataDevice>
                                         </PolicyMetadata>
                                 #>
-                                $additionalData = ($admxPolicyAreaNameMetadata.AreaName | ? { $_.ADMXIngestedAreaName -eq $policyAreaName }).PolicyMetadata | ? { $_.PolicyName -EQ $settingName }
+                                $additionalData = ($admxPolicyAreaNameMetadata.AreaName | ? { $_.ADMXIngestedAreaName -eq $policyAreaName }).PolicyMetadata | ? { $_.PolicyName -EQ $settingName } | select -First 1 # sometimes there are duplicities in results
 
                                 if ($additionalData) {
                                     Write-Verbose "Additional data for '$settingName' was found in admxPolicyAreaNameMetadata"
