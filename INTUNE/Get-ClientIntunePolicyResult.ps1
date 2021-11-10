@@ -694,11 +694,11 @@
                             "Type"           = $type
                             "Status"         = _translateStatus $_.Status
                             "LastError"      = $_.LastError
-                            "PackageId"      = $_.PackageId -replace "{" -replace "}"
                             "ProductVersion" = $_.ProductVersion
                             "CommandLine"    = $_.CommandLine
                             "RetryIndex"     = $_.EnforcementRetryIndex
                             "MaxRetryCount"  = $_.EnforcementRetryCount
+                            "PackageId"      = $_.PackageId -replace "{" -replace "}"
                         }
                         $settingDetails += New-Object -TypeName PSObject -Property $property
                     }
@@ -882,7 +882,7 @@
                         Add-Member -InputObject $item -MemberType NoteProperty -Force -Name DisplayName -Value ($installedMSI | ? UninstallString -Match ([regex]::Escape($packageId)) | select -Last 1 -ExpandProperty DisplayName)
 
                         #return modified MSI object (put Displayname as a second property)
-                        $item | select -Property Type, DisplayName, Status, LastError, ProductVersion, PackageId, CommandLine
+                        $item | select -Property Scope, DisplayName, Type, Status, LastError, ProductVersion, CommandLine, RetryIndex, MaxRetryCount, PackageId
                     }
 
                     # save results back to original object
@@ -1161,7 +1161,7 @@
                         if (!$showURLs) { $excludeProperty += 'PolicyURL' }
                         $resultsWithoutSettings = $resultsWithoutSettings | Select-Object -Property * -exclude $excludeProperty
                         # sort
-                        $resultsWithoutSettings = $resultsWithoutSettings | Sort-Object -Property Scope
+                        $resultsWithoutSettings = $resultsWithoutSettings | Sort-Object -Property Scope, PolicyName
                         #endregion prepare data
 
                         # render policies
@@ -1172,6 +1172,9 @@
                 }
 
                 if ($resultsWithSettings) {
+                    # sort
+                    $resultsWithSettings = $resultsWithSettings | Sort-Object -Property Scope, PolicyName
+
                     New-HTMLSection -HeaderText "Policies with settings details" -HeaderTextAlignment left -CanCollapse -BackgroundColor DeepSkyBlue -HeaderBackGroundColor DeepSkyBlue -HeaderTextSize 10 -HeaderTextColor EgyptianBlue -Direction row {
                         $resultsWithSettings | % {
                             $policy = $_
