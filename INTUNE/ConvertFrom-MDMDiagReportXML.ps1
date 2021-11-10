@@ -183,7 +183,7 @@
                         continue
                     }
                     # get rid of MSI installations (I have them with details in separate section)
-                    if ($policyAreaName -match "device/Vendor/MSFT/EnterpriseDesktopAppManagement/MSI") {
+                    if ($policyAreaName -match "/Vendor/MSFT/EnterpriseDesktopAppManagement/MSI") {
                         continue
                     }
                     # get rid of useless data
@@ -637,7 +637,7 @@
                         if (!$showURLs) { $excludeProperty += 'PolicyURL' }
                         $resultsWithoutSettings = $resultsWithoutSettings | Select-Object -Property * -exclude $excludeProperty
                         # sort
-                        $resultsWithoutSettings = $resultsWithoutSettings | Sort-Object -Property Scope
+                        $resultsWithoutSettings = $resultsWithoutSettings | Sort-Object -Property Scope, PolicyName
                         #endregion prepare data
 
                         # render policies
@@ -649,6 +649,9 @@
 
                 if ($resultsWithSettings) {
                     New-HTMLSection -HeaderText "Policies with settings details" -HeaderTextAlignment left -CanCollapse -BackgroundColor DeepSkyBlue -HeaderBackGroundColor DeepSkyBlue -HeaderTextSize 10 -HeaderTextColor EgyptianBlue -Direction row {
+                        # sort
+                        $resultsWithSettings = $resultsWithSettings | Sort-Object -Property Scope, PolicyName
+
                         $resultsWithSettings | % {
                             $policy = $_
                             $policySetting = $_.settingDetails
