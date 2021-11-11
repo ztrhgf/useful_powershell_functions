@@ -43,6 +43,7 @@
 
     .NOTES
     Author: Ondrej Sebela (ztrhgf@seznam.cz)
+    URL: https://doitpsway.com/get-a-better-intune-policy-report-part-2
     #>
 
     [CmdletBinding()]

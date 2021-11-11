@@ -55,6 +55,7 @@
 
     .NOTES
     Author: Ondrej Sebela (ztrhgf@seznam.cz)
+    URL: https://doitpsway.com/get-a-better-intune-policy-report-part-3
     #>
 
     [Alias("ipresult", "Get-IntunePolicyResult")]
