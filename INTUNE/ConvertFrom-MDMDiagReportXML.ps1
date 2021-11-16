@@ -30,6 +30,10 @@
 
     Make running the function slower! Because I test each URL and shows just existing ones.
 
+    .PARAMETER showConnectionData
+    Switch for showing Intune connection data.
+    Beware that this will add new object type to the output (but it doesn't matter if you use asHTML switch).
+
     .EXAMPLE
     $intuneReport = ConvertFrom-MDMDiagReportXML
     $intuneReport | Out-GridView
@@ -70,7 +74,9 @@
 
         [switch] $showEnrollmentIDs,
 
-        [switch] $showURLs
+        [switch] $showURLs,
+
+        [switch] $showConnectionData
     )
 
     if ($asHTML) {
@@ -105,8 +111,27 @@
     Write-Verbose "Converting '$MDMDiagReport' to XML object"
     [xml]$xml = Get-Content $MDMDiagReport -Raw -ErrorAction Stop
 
+    Write-Verbose "Getting EnrollmentID"
     $userEnrollmentID = Get-ScheduledTask -TaskName "*pushlaunch*" -TaskPath "\Microsoft\Windows\EnterpriseMgmt\*" | Select-Object -ExpandProperty TaskPath | Split-Path -Leaf
     Write-Verbose "Your EnrollmentID is $userEnrollmentID"
+
+    #region connection data
+    if ($showConnectionData) {
+        Write-Verbose "Getting connection data"
+        $connectionInfo = $xml.MDMEnterpriseDiagnosticsReport.DeviceManagementAccount.Enrollment | ? EnrollmentId -EQ $userEnrollmentID
+
+        if ($connectionInfo) {
+            [PSCustomObject]@{
+                "EnrollmentId"          = $connectionInfo.EnrollmentId
+                "MDMServerName"         = $connectionInfo.ProtectedInformation.MDMServerName
+                "LastSuccessConnection" = [DateTime]::ParseExact(($connectionInfo.ProtectedInformation.ConnectionInformation.ServerLastSuccessTime -replace "Z$"), 'yyyyMMddTHHmmss', $null)
+                "LastFailureConnection" = [DateTime]::ParseExact(($connectionInfo.ProtectedInformation.ConnectionInformation.ServerLastFailureTime -replace "Z$"), 'yyyyMMddTHHmmss', $null)
+            }
+        } else {
+            Write-Verbose "Unable to get connection data from $MDMDiagReport"
+        }
+    }
+    #endregion connection data
 
     #region helper functions
     function ConvertFrom-XML {

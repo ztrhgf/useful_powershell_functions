@@ -73,7 +73,9 @@
 
         [switch] $showEnrollmentIDs,
 
-        [switch] $showURLs
+        [switch] $showURLs,
+
+        [switch] $showConnectionData
     )
 
     #region prepare
@@ -112,7 +114,7 @@
         $param = @{}
         if ($showEnrollmentIDs) { $param.showEnrollmentIDs = $true }
         if ($showURLs) { $param.showURLs = $true }
-
+        if ($showConnectionData) { $param.showConnectionData = $true }
         Write-Verbose "Getting local Intune data via ConvertFrom-MDMDiagReportXML"
         $intuneXMLReport = ConvertFrom-MDMDiagReportXML @param
     }
@@ -151,6 +153,10 @@
     Switch for adding PolicyURL and PolicySettingsURL properties i.e. properties containing URL with Microsoft documentation for given CSP.
 
     Make running the function slower! Because I test each URL and shows just existing ones.
+
+    .PARAMETER showConnectionData
+    Switch for showing Intune connection data.
+    Beware that this will add new object type to the output (but it doesn't matter if you use asHTML switch).
 
     .EXAMPLE
     $intuneReport = ConvertFrom-MDMDiagReportXML
@@ -192,7 +198,9 @@
 
                 [switch] $showEnrollmentIDs,
 
-                [switch] $showURLs
+                [switch] $showURLs,
+
+                [switch] $showConnectionData
             )
 
             if ($asHTML) {
@@ -227,28 +235,47 @@
             Write-Verbose "Converting '$MDMDiagReport' to XML object"
             [xml]$xml = Get-Content $MDMDiagReport -Raw -ErrorAction Stop
 
+            Write-Verbose "Getting EnrollmentID"
             $userEnrollmentID = Get-ScheduledTask -TaskName "*pushlaunch*" -TaskPath "\Microsoft\Windows\EnterpriseMgmt\*" | Select-Object -ExpandProperty TaskPath | Split-Path -Leaf
             Write-Verbose "Your EnrollmentID is $userEnrollmentID"
+
+            #region connection data
+            if ($showConnectionData) {
+                Write-Verbose "Getting connection data"
+                $connectionInfo = $xml.MDMEnterpriseDiagnosticsReport.DeviceManagementAccount.Enrollment | ? EnrollmentId -EQ $userEnrollmentID
+
+                if ($connectionInfo) {
+                    [PSCustomObject]@{
+                        "EnrollmentId"          = $connectionInfo.EnrollmentId
+                        "MDMServerName"         = $connectionInfo.ProtectedInformation.MDMServerName
+                        "LastSuccessConnection" = [DateTime]::ParseExact(($connectionInfo.ProtectedInformation.ConnectionInformation.ServerLastSuccessTime -replace "Z$"), 'yyyyMMddTHHmmss', $null)
+                        "LastFailureConnection" = [DateTime]::ParseExact(($connectionInfo.ProtectedInformation.ConnectionInformation.ServerLastFailureTime -replace "Z$"), 'yyyyMMddTHHmmss', $null)
+                    }
+                } else {
+                    Write-Verbose "Unable to get connection data from $MDMDiagReport"
+                }
+            }
+            #endregion connection data
 
             #region helper functions
             function ConvertFrom-XML {
                 <#
-                .SYNOPSIS
-                Function for converting XML object (XmlNode) to PSObject.
+        .SYNOPSIS
+        Function for converting XML object (XmlNode) to PSObject.
 
-                .DESCRIPTION
-                Function for converting XML object (XmlNode) to PSObject.
+        .DESCRIPTION
+        Function for converting XML object (XmlNode) to PSObject.
 
-                .PARAMETER node
-                XmlNode object (retrieved like: [xml]$xmlObject = (Get-Content C:\temp\file.xml -Raw))
+        .PARAMETER node
+        XmlNode object (retrieved like: [xml]$xmlObject = (Get-Content C:\temp\file.xml -Raw))
 
-                .EXAMPLE
-                [xml]$xmlObject = (Get-Content C:\temp\file.xml -Raw)
-                ConvertFrom-XML $xmlObject
+        .EXAMPLE
+        [xml]$xmlObject = (Get-Content C:\temp\file.xml -Raw)
+        ConvertFrom-XML $xmlObject
 
-                .NOTES
-                Based on https://stackoverflow.com/questions/3242995/convert-xml-to-psobject
-                #>
+        .NOTES
+        Based on https://stackoverflow.com/questions/3242995/convert-xml-to-psobject
+        #>
 
                 [CmdletBinding()]
                 param (
@@ -1251,9 +1278,13 @@
         # split the results
         $resultsWithSettings = @()
         $resultsWithoutSettings = @()
+        $resultsConnectionData = $null
         $intuneXMLReport | % {
             if ($_.settingDetails) {
                 $resultsWithSettings += $_
+            } elseif ($_.MDMServerName) {
+                # MDMServerName property is only in object representing connection data
+                $resultsConnectionData = $_
             } else {
                 $resultsWithoutSettings += $_
             }
@@ -1264,6 +1295,15 @@
             New-HTMLTableStyle -TextAlign center
 
             New-HTMLSection -HeaderText 'Intune Report' -Direction row -HeaderBackGroundColor Black -HeaderTextColor White -HeaderTextSize 20 {
+                if ($resultsConnectionData) {
+                    New-HTMLSection -HeaderText "Intune connection information" -HeaderTextAlignment left -CanCollapse -BackgroundColor DeepSkyBlue -HeaderBackGroundColor DeepSkyBlue -HeaderTextSize 10 -HeaderTextColor EgyptianBlue -Direction row {
+                        # render policies
+                        New-HTMLSection -BackgroundColor White {
+                            New-HTMLTable -DataTable $resultsConnectionData -WordBreak 'break-all' -DisableInfo -HideButtons -DisablePaging -HideFooter -DisableSearch -DisableOrdering
+                        }
+                    }
+                }
+
                 if ($resultsWithoutSettings) {
                     New-HTMLSection -HeaderText "Policies without settings details" -HeaderTextAlignment left -CanCollapse -BackgroundColor DeepSkyBlue -HeaderBackGroundColor DeepSkyBlue -HeaderTextSize 10 -HeaderTextColor EgyptianBlue -Direction row {
                         #region prepare data
