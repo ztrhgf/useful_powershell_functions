@@ -61,6 +61,7 @@
     [Alias("ipresult", "Get-IntunePolicyResult")]
     [CmdletBinding()]
     param (
+        [ValidateScript( { $_.GetType().Name -eq 'Object[]' } )]
         $intuneXMLReport,
 
         [switch] $asHTML,
