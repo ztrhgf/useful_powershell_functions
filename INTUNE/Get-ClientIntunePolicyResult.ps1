@@ -1004,7 +1004,7 @@
     # https://oliverkieselbach.com/2018/10/02/part-3-deep-dive-microsoft-intune-management-extension-win32-apps/
     # HKLM\SOFTWARE\Microsoft\IntuneManagementExtension\Apps\ doesn't exists?
     Write-Verbose "Processing 'Win32App' section"
-    $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps" | % {
+    $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps" -ErrorAction SilentlyContinue | % {
         $userAzureObjectID = Split-Path $_.Name -Leaf
 
         $userWin32AppRoot = $_.PSPath
@@ -1081,7 +1081,7 @@
     #region add Scripts section
     # https://oliverkieselbach.com/2018/02/12/part-2-deep-dive-microsoft-intune-management-extension-powershell-scripts/
     Write-Verbose "Processing 'Script' section"
-    $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Policies" | % {
+    $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Policies" -ErrorAction SilentlyContinue | % {
         $userAzureObjectID = Split-Path $_.Name -Leaf
         if ($userAzureObjectID -eq '00000000-0000-0000-0000-000000000000') {
             $userAzureObjectID = $null
@@ -1159,7 +1159,7 @@
 
     #region remediation script
     Write-Verbose "Processing 'Remediation Script' section"
-    $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\SideCarPolicies\Scripts\Reports" | % {
+    $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\SideCarPolicies\Scripts\Reports" -ErrorAction SilentlyContinue | % {
         $userAzureObjectID = Split-Path $_.Name -Leaf
         $userRemScriptRoot = $_.PSPath
 
