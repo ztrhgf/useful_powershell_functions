@@ -79,6 +79,9 @@
         [switch] $showConnectionData
     )
 
+    # remove property validation
+    (Get-Variable intuneXMLReport).Attributes.Clear()
+
     #region prepare
     if ($asHTML) {
         if (!(Get-Module 'PSWriteHtml') -and (!(Get-Module 'PSWriteHtml' -ListAvailable))) {
