@@ -99,24 +99,12 @@
             # $header = New-GraphAPIAuthHeader -ErrorAction Stop
         }
 
-        # $PSDefaultParameterValues = @{'Invoke-RestMethod:Headers' = $header }
-
         Write-Verbose "Getting Intune data"
         # filtering by ID is quite same as slow as getting all data
         # Invoke-MSGraphRequest -Url 'https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?$filter=(id%20eq%20%2756695a77-925a-4df0-be79-24ed039afa86%27)'
         $intuneRemediationScript = Invoke-MSGraphRequest -Url "https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts" | Get-MSGraphAllPages
         $intuneScript = Invoke-MSGraphRequest -Url "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts" | Get-MSGraphAllPages
         $intuneApp = Invoke-MSGraphRequest -Url "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps" | Get-MSGraphAllPages
-    }
-
-    # get the core Intune data
-    if (!$intuneXMLReport) {
-        $param = @{}
-        if ($showEnrollmentIDs) { $param.showEnrollmentIDs = $true }
-        if ($showURLs) { $param.showURLs = $true }
-        if ($showConnectionData) { $param.showConnectionData = $true }
-        Write-Verbose "Getting local Intune data via ConvertFrom-MDMDiagReportXML"
-        $intuneXMLReport = ConvertFrom-MDMDiagReportXML @param
     }
     #endregion prepare
 
@@ -989,6 +977,16 @@
         $intuneRemediationScript | ? id -EQ $scriptID
     }
     #endregion helper functions
+
+    # get the core Intune data
+    if (!$intuneXMLReport) {
+        $param = @{}
+        if ($showEnrollmentIDs) { $param.showEnrollmentIDs = $true }
+        if ($showURLs) { $param.showURLs = $true }
+        if ($showConnectionData) { $param.showConnectionData = $true }
+        Write-Verbose "Getting local Intune data via ConvertFrom-MDMDiagReportXML"
+        $intuneXMLReport = ConvertFrom-MDMDiagReportXML @param
+    }
 
     #region enrich SoftwareInstallation section
     if ($intuneXMLReport | ? PolicyName -EQ 'SoftwareInstallation') {
