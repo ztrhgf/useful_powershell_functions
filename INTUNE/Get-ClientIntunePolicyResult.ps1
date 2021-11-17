@@ -21,8 +21,8 @@
     Default is "IntunePolicyReport.html" in user profile.
 
     .PARAMETER getDataFromIntune
-    Switch for getting additional data (policy names) from Intune itself.
-    Microsoft.Graph.Intune module is needed!
+    Switch for getting additional data (policy names and account name instead of ID) from Intune itself.
+    Microsoft.Graph.Intune module is required!
 
     .PARAMETER credential
     Credentials for connecting to Intune.
@@ -34,6 +34,9 @@
     .PARAMETER showURLs
     Switch for showing policy/setting URLs in the result.
     Makes this function a little slower, because every URL is tested that it exists.
+
+    .PARAMETER showConnectionData
+    Switch for showing data related to client's connection to the Intune.
 
     .EXAMPLE
     Get-ClientIntunePolicyResult
@@ -48,10 +51,10 @@
 
     .EXAMPLE
     $intuneREADCred = Get-Credential
-    Get-ClientIntunePolicyResult -showURLs -asHTML -getDataFromIntune -credential $intuneREADCred
+    Get-ClientIntunePolicyResult -showURLs -asHTML -getDataFromIntune -showConnectionData -credential $intuneREADCred
 
-    Will return HTML page containing Intune policy processing report data.
-    URLs to policies/settings will be included same as Intune policies names (if available).
+    Will return HTML page containing Intune policy processing report data and connection data.
+    URLs to policies/settings and Intune policies names (if available) will be included.
 
     .NOTES
     Author: Ondrej Sebela (ztrhgf@seznam.cz)
@@ -413,7 +416,7 @@
                     $enrollmentId = $_.EnrollmentId
 
                     $policy.Scope | % {
-                        $policyScope = $_.ResourceTarget -replace "device", "Device"
+                        $scope = _getTargetName $_.ResourceTarget
 
                         foreach ($policyAreaName in $_.Resources.ResourceName) {
                             # some policies have just number instead of any name..I don't know what it means so I ignore them
@@ -429,7 +432,7 @@
                                 continue
                             }
 
-                            Write-Verbose "`nEnrollment '$enrollmentId' applied to '$policyScope' configures resource '$policyAreaName'"
+                            Write-Verbose "`nEnrollment '$enrollmentId' applied to '$scope' configures resource '$policyAreaName'"
 
                             #region get policy settings details
                             $settingDetails = $null
@@ -520,7 +523,7 @@
 
                             #region return retrieved data
                             $property = [ordered] @{
-                                Scope          = $policyScope
+                                Scope          = $scope
                                 PolicyName     = $policyAreaName
                                 SettingName    = $policyAreaName
                                 SettingDetails = $settingDetails
@@ -568,7 +571,7 @@
                     $enrollmentId = $_.EnrollmentId
 
                     $policy.policyScope | % {
-                        $policyScope = $_.PolicyScope -replace "device", "Device"
+                        $scope = _getTargetName $_.PolicyScope
                         $_.Area | % {
                             <#
                     <ConfigSource>
@@ -583,7 +586,7 @@
                     #>
 
                             $policyAreaName = $_.PolicyAreaName
-                            Write-Verbose "`nEnrollment '$enrollmentId' applied to '$policyScope' configures area '$policyAreaName'"
+                            Write-Verbose "`nEnrollment '$enrollmentId' applied to '$scope' configures area '$policyAreaName'"
                             $policyAreaSetting = $_ | Select-Object -Property * -ExcludeProperty 'PolicyAreaName', "*_LastWrite"
                             $policyAreaSettingName = $policyAreaSetting | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty name
                             if ($policyAreaSettingName.count -eq 1 -and $policyAreaSettingName -eq "*") {
@@ -739,7 +742,7 @@
 
                             #region return retrieved data
                             $property = [ordered] @{
-                                Scope          = $policyScope
+                                Scope          = $scope
                                 PolicyName     = $policyAreaName
                                 SettingName    = $policyAreaSettingName
                                 SettingDetails = $settingDetails
@@ -800,8 +803,7 @@
                     </Details>
             #>
 
-                    $scope = $_.UserSid
-                    if ($scope -eq 'S-0-0-00-0000000000-0000000000-000000000-000') { $scope = 'Device' }
+                    $userSID = $_.UserSid
                     $type = $_.Package.Type
                     $details = $_.Package.details
 
@@ -810,7 +812,7 @@
 
                         # define base object
                         $property = [ordered]@{
-                            "Scope"          = $scope
+                            "Scope"          = _getTargetName $userSID
                             "Type"           = $type
                             "Status"         = _translateStatus $_.Status
                             "LastError"      = $_.LastError
@@ -945,6 +947,43 @@
         }
     }
 
+    function _getTargetName {
+        param ([string] $id)
+
+        Write-Verbose "Translating $id"
+
+        if (!$id) {
+            Write-Verbose "id was null"
+            return
+        } elseif ($id -eq 'device') {
+            # xml nodes contains 'device' instead of 'Device'
+            return 'Device'
+        }
+
+        $errPref = $ErrorActionPreference
+        $ErrorActionPreference = "Stop"
+        try {
+            if ($id -eq '00000000-0000-0000-0000-000000000000' -or $id -eq 'S-0-0-00-0000000000-0000000000-000000000-000') {
+                return 'Device'
+            } elseif ($id -match "^S-1-5-21") {
+                # it is local account
+                return ((New-Object System.Security.Principal.SecurityIdentifier($id)).Translate([System.Security.Principal.NTAccount])).Value
+            } else {
+                # it is AzureAD account
+                if ($getDataFromIntune) {
+                    return (Invoke-MSGraphRequest -Url "https://graph.microsoft.com/beta/users/$id").userPrincipalName
+                } else {
+                    # unable to translate ID to name because there is no connection to the Intune Graph API
+                    return $id
+                }
+            }
+        } catch {
+            Write-Verbose "Unable to translate $id account name"
+            $ErrorActionPreference = $errPref
+            return $id
+        }
+    }
+
     function Get-InstalledSoftware {
         $RegistryLocation = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\', 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\'
         $HashProperty = @{}
@@ -1047,13 +1086,15 @@
             $newestWin32AppRecord = Get-ChildItem $userWin32AppRoot | ? PSChildName -Match ([regex]::escape($win32AppID)) | Sort-Object -Descending -Property PSChildName | select -First 1
 
             $lastUpdatedTimeUtc = Get-ItemPropertyValue $newestWin32AppRecord.PSPath -Name LastUpdatedTimeUtc
-            $complianceStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\ComplianceStateMessage" -Name ComplianceStateMessage | ConvertFrom-Json
-            $enforcementStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\EnforcementStateMessage" -Name EnforcementStateMessage | ConvertFrom-Json
-
-            if ($userAzureObjectID -eq '00000000-0000-0000-0000-000000000000') {
-                $scope = 'Device'
-            } else {
-                $scope = $userAzureObjectID
+            try {
+                $complianceStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\ComplianceStateMessage" -Name ComplianceStateMessage | ConvertFrom-Json -ErrorAction Stop
+            } catch {
+                Write-Verbose "`tUnable to get Compliance State Message data"
+            }
+            try {
+                $enforcementStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\EnforcementStateMessage" -Name EnforcementStateMessage | ConvertFrom-Json -ErrorAction Stop
+            } catch {
+                Write-Verbose "`tUnable to get Enforcement State Message data"
             }
 
             $lastError = $complianceStateMessage.ErrorCode
@@ -1061,8 +1102,7 @@
 
             if ($getDataFromIntune) {
                 $property = [ordered]@{
-                    "Scope"              = $scope
-                    "UserAzureObjectID"  = $userAzureObjectID # I want to make it more clear that this is ID of the targeted AzureAD user
+                    "Scope"              = _getTargetName $userAzureObjectID
                     "DisplayName"        = (_getIntuneApp $win32AppID).DisplayName
                     "Id"                 = $win32AppID
                     "LastUpdatedTimeUtc" = $lastUpdatedTimeUtc
@@ -1073,8 +1113,7 @@
             } else {
                 # no 'DisplayName' property
                 $property = [ordered]@{
-                    "Scope"              = $scope
-                    "UserAzureObjectID"  = $userAzureObjectID # I want to make it more clear that this is ID of the targeted AzureAD user
+                    "Scope"              = _getTargetName $userAzureObjectID
                     "Id"                 = $win32AppID
                     "LastUpdatedTimeUtc" = $lastUpdatedTimeUtc
                     # "Status"            = $complianceStateMessage.ComplianceState
@@ -1112,12 +1151,6 @@
     Write-Verbose "Processing 'Script' section"
     $settingDetails = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Policies" -ErrorAction SilentlyContinue | % {
         $userAzureObjectID = Split-Path $_.Name -Leaf
-        if ($userAzureObjectID -eq '00000000-0000-0000-0000-000000000000') {
-            $userAzureObjectID = $null
-            $scope = 'Device'
-        } else {
-            $scope = $userAzureObjectID
-        }
 
         Get-ChildItem $_.PSPath | % {
             $scriptRegPath = $_.PSPath
@@ -1129,15 +1162,18 @@
 
             # get output of the invoked script
             if ($scriptRegData.ResultDetails) {
-                $resultDetails = $scriptRegData.ResultDetails | ConvertFrom-Json | select -ExpandProperty ExecutionMsg
+                try {
+                    $resultDetails = $scriptRegData.ResultDetails | ConvertFrom-Json -ErrorAction Stop | select -ExpandProperty ExecutionMsg
+                } catch {
+                    Write-Verbose "`tUnable to get Script Output data"
+                }
             } else {
                 $resultDetails = $null
             }
 
             if ($getDataFromIntune) {
                 $property = [ordered]@{
-                    "Scope"                   = $scope
-                    "UserAzureObjectID"       = $userAzureObjectID # I want to make it more clear that this is ID of the targeted AzureAD user
+                    "Scope"                   = _getTargetName $userAzureObjectID
                     "DisplayName"             = (_getIntuneScript $scriptID).DisplayName
                     "Id"                      = $scriptID
                     "Result"                  = $scriptRegData.Result
@@ -1150,8 +1186,7 @@
             } else {
                 # no 'DisplayName' property
                 $property = [ordered]@{
-                    "Scope"                   = $scope
-                    "UserAzureObjectID"       = $userAzureObjectID # I want to make it more clear that this is ID of the targeted AzureAD user
+                    "Scope"                   = _getTargetName $userAzureObjectID
                     "Id"                      = $scriptID
                     "Result"                  = $scriptRegData.Result
                     "ErrorCode"               = $scriptRegData.ErrorCode
@@ -1202,19 +1237,17 @@
 
             $newestRemScriptRecord = Get-ChildItem $userRemScriptRoot | ? PSChildName -Match ([regex]::escape($remScriptID)) | Sort-Object -Descending -Property PSChildName | select -First 1
 
-            $result = Get-ItemPropertyValue "$($newestRemScriptRecord.PSPath)\Result" -Name Result | ConvertFrom-Json
-            $lastExecution = Get-ItemPropertyValue "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\SideCarPolicies\Scripts\Execution\$userAzureObjectID\$($newestRemScriptRecord.PSChildName)" -Name LastExecution
-
-            if ($userAzureObjectID -eq '00000000-0000-0000-0000-000000000000') {
-                $scope = 'Device'
-            } else {
-                $scope = $userAzureObjectID
+            try {
+                $result = Get-ItemPropertyValue "$($newestRemScriptRecord.PSPath)\Result" -Name Result | ConvertFrom-Json
+            } catch {
+                Write-Verbose "`tUnable to get Remediation Script Result data"
             }
+
+            $lastExecution = Get-ItemPropertyValue "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\SideCarPolicies\Scripts\Execution\$userAzureObjectID\$($newestRemScriptRecord.PSChildName)" -Name LastExecution
 
             if ($getDataFromIntune) {
                 $property = [ordered]@{
-                    "Scope"                             = $scope
-                    "UserAzureObjectID"                 = $userAzureObjectID # I want to make it more clear that this is ID of the targeted AzureAD user
+                    "Scope"                             = _getTargetName $userAzureObjectID
                     "DisplayName"                       = (_getRemediationScript $remScriptID).DisplayName
                     "Id"                                = $remScriptID
                     "LastError"                         = $result.ErrorCode
@@ -1234,8 +1267,7 @@
             } else {
                 # no 'DisplayName' property
                 $property = [ordered]@{
-                    "Scope"                             = $scope
-                    "UserAzureObjectID"                 = $userAzureObjectID # I want to make it more clear that this is ID of the targeted AzureAD user
+                    "Scope"                             = _getTargetName $userAzureObjectID
                     "Id"                                = $remScriptID
                     "LastError"                         = $result.ErrorCode
                     "LastExecution"                     = $lastExecution

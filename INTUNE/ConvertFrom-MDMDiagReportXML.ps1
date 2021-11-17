@@ -134,6 +134,43 @@
     #endregion connection data
 
     #region helper functions
+    function _getTargetName {
+        param ([string] $id)
+
+        Write-Verbose "Translating $id"
+
+        if (!$id) {
+            Write-Verbose "id was null"
+            return
+        } elseif ($id -eq 'device') {
+            # xml nodes contains 'device' instead of 'Device'
+            return 'Device'
+        }
+
+        $errPref = $ErrorActionPreference
+        $ErrorActionPreference = "Stop"
+        try {
+            if ($id -eq '00000000-0000-0000-0000-000000000000' -or $id -eq 'S-0-0-00-0000000000-0000000000-000000000-000') {
+                return 'Device'
+            } elseif ($id -match "^S-1-5-21") {
+                # it is local account
+                return ((New-Object System.Security.Principal.SecurityIdentifier($id)).Translate([System.Security.Principal.NTAccount])).Value
+            } else {
+                # it is AzureAD account
+                if ($getDataFromIntune) {
+                    return (Invoke-MSGraphRequest -Url "https://graph.microsoft.com/beta/users/$id").userPrincipalName
+                } else {
+                    # unable to translate ID to name because there is no connection to the Intune Graph API
+                    return $id
+                }
+            }
+        } catch {
+            Write-Verbose "Unable to translate $id account name"
+            $ErrorActionPreference = $errPref
+            return $id
+        }
+    }
+
     function ConvertFrom-XML {
         <#
         .SYNOPSIS
@@ -297,7 +334,7 @@
             $enrollmentId = $_.EnrollmentId
 
             $policy.Scope | % {
-                $policyScope = $_.ResourceTarget -replace "device", "Device"
+                $scope = _getTargetName $_.ResourceTarget
 
                 foreach ($policyAreaName in $_.Resources.ResourceName) {
                     # some policies have just number instead of any name..I don't know what it means so I ignore them
@@ -313,7 +350,7 @@
                         continue
                     }
 
-                    Write-Verbose "`nEnrollment '$enrollmentId' applied to '$policyScope' configures resource '$policyAreaName'"
+                    Write-Verbose "`nEnrollment '$enrollmentId' applied to '$scope' configures resource '$policyAreaName'"
 
                     #region get policy settings details
                     $settingDetails = $null
@@ -404,7 +441,7 @@
 
                     #region return retrieved data
                     $property = [ordered] @{
-                        Scope          = $policyScope
+                        Scope          = $scope
                         PolicyName     = $policyAreaName
                         SettingName    = $policyAreaName
                         SettingDetails = $settingDetails
@@ -452,7 +489,7 @@
             $enrollmentId = $_.EnrollmentId
 
             $policy.policyScope | % {
-                $policyScope = $_.PolicyScope -replace "device", "Device"
+                $scope = _getTargetName $_.PolicyScope
                 $_.Area | % {
                     <#
                     <ConfigSource>
@@ -467,7 +504,7 @@
                     #>
 
                     $policyAreaName = $_.PolicyAreaName
-                    Write-Verbose "`nEnrollment '$enrollmentId' applied to '$policyScope' configures area '$policyAreaName'"
+                    Write-Verbose "`nEnrollment '$enrollmentId' applied to '$scope' configures area '$policyAreaName'"
                     $policyAreaSetting = $_ | Select-Object -Property * -ExcludeProperty 'PolicyAreaName', "*_LastWrite"
                     $policyAreaSettingName = $policyAreaSetting | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty name
                     if ($policyAreaSettingName.count -eq 1 -and $policyAreaSettingName -eq "*") {
@@ -623,7 +660,7 @@
 
                     #region return retrieved data
                     $property = [ordered] @{
-                        Scope          = $policyScope
+                        Scope          = $scope
                         PolicyName     = $policyAreaName
                         SettingName    = $policyAreaSettingName
                         SettingDetails = $settingDetails
@@ -684,8 +721,7 @@
                     </Details>
             #>
 
-            $scope = $_.UserSid
-            if ($scope -eq 'S-0-0-00-0000000000-0000000000-000000000-000') { $scope = 'Device' }
+            $userSID = $_.UserSid
             $type = $_.Package.Type
             $details = $_.Package.details
 
@@ -694,7 +730,7 @@
 
                 # define base object
                 $property = [ordered]@{
-                    "Scope"          = $scope
+                    "Scope"          = _getTargetName $userSID
                     "Type"           = $type
                     "Status"         = _translateStatus $_.Status
                     "LastError"      = $_.LastError
