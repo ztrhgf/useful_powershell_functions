@@ -28,6 +28,11 @@
     Credentials for connecting to Intune.
     Account that has at least READ permissions has to be used.
 
+    .PARAMETER tenantId
+    String with your TenantID.
+    Use only if you want use application authentication (instead of user authentication).
+    You can get your TenantID at https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Overview.
+
     .PARAMETER showEnrollmentIDs
     Switch for showing EnrollmentIDs in the result.
 
@@ -56,6 +61,14 @@
     Will return HTML page containing Intune policy processing report data and connection data.
     URLs to policies/settings and Intune policies names (if available) will be included.
 
+    .EXAMPLE
+    $intuneREADAppCred = Get-Credential
+    Get-ClientIntunePolicyResult -showURLs -asHTML -getDataFromIntune -credential $intuneREADAppCred -tenantId 123456789
+
+    Will return HTML page containing Intune policy processing report data.
+    URLs to policies/settings will be included same as Intune policies names (if available).
+    For authentication to Intune registered application secret will be used (AppID and secret stored in credentials object).
+
     .NOTES
     Author: Ondrej Sebela (ztrhgf@seznam.cz)
     URL: https://doitpsway.com/get-a-better-intune-policy-report-part-3
@@ -74,6 +87,8 @@
         [switch] $getDataFromIntune,
 
         [System.Management.Automation.PSCredential] $credential,
+
+        [string] $tenantId,
 
         [switch] $showEnrollmentIDs,
 
@@ -98,12 +113,23 @@
             throw "Module 'Microsoft.Graph.Intune' is required. To install it call: Install-Module 'Microsoft.Graph.Intune' -Scope CurrentUser"
         }
 
-        if ($credential) {
-            $null = Connect-MSGraph -Credential $credential -ErrorAction Stop
-            # $header = New-GraphAPIAuthHeader -credential $credential -ErrorAction Stop
+        if ($tenantId) {
+            # app logon
+            if ($credential) {
+                Connect-MSGraphApp -Tenant $tenantId -AppId $appId -AppSecret $appSecret -ErrorAction Stop
+            } else {
+                $credential = Get-Credential -Message "Enter AppID and AppSecret for connecting to Intune tenant"
+                Connect-MSGraphApp -Tenant $tenantId -AppId $credential.UserName -AppSecret $credential.GetNetworkCredential().Password -ErrorAction Stop
+            }
         } else {
-            $null = Connect-MSGraph -ErrorAction Stop
-            # $header = New-GraphAPIAuthHeader -ErrorAction Stop
+            # user logon
+            if ($credential) {
+                $null = Connect-MSGraph -Credential $credential -ErrorAction Stop
+                # $header = New-GraphAPIAuthHeader -credential $credential -ErrorAction Stop
+            } else {
+                $null = Connect-MSGraph -ErrorAction Stop
+                # $header = New-GraphAPIAuthHeader -ErrorAction Stop
+            }
         }
 
         Write-Verbose "Getting Intune data"
