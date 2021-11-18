@@ -24,6 +24,8 @@
     Switch for getting additional data (policy names and account name instead of ID) from Intune itself.
     Microsoft.Graph.Intune module is required!
 
+    Account with READ permission for: Applications, Scripts, RemediationScripts, Users will be needed!
+
     .PARAMETER credential
     Credentials for connecting to Intune.
     Account that has at least READ permissions has to be used.
@@ -115,12 +117,12 @@
 
         if ($tenantId) {
             # app logon
-            if ($credential) {
-                Connect-MSGraphApp -Tenant $tenantId -AppId $appId -AppSecret $appSecret -ErrorAction Stop
-            } else {
-                $credential = Get-Credential -Message "Enter AppID and AppSecret for connecting to Intune tenant"
-                Connect-MSGraphApp -Tenant $tenantId -AppId $credential.UserName -AppSecret $credential.GetNetworkCredential().Password -ErrorAction Stop
+            if (!$credential) {
+                $credential = Get-Credential -Message "Enter AppID and AppSecret for connecting to Intune tenant" -ErrorAction Stop
             }
+            Update-MSGraphEnvironment -AppId $credential.UserName -Quiet
+            Update-MSGraphEnvironment -AuthUrl "https://login.windows.net/$tenantId" -Quiet
+            $null = Connect-MSGraph -ClientSecret $credential.GetNetworkCredential().Password -ErrorAction Stop
         } else {
             # user logon
             if ($credential) {
