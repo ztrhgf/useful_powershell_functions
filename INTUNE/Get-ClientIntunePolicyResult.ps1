@@ -21,10 +21,14 @@
     Default is "IntunePolicyReport.html" in user profile.
 
     .PARAMETER getDataFromIntune
-    Switch for getting additional data (policy names and account name instead of ID) from Intune itself.
+    Switch for getting additional data (policy names and account names instead of IDs) from Intune itself.
     Microsoft.Graph.Intune module is required!
 
-    Account with READ permission for: Applications, Scripts, RemediationScripts, Users will be needed!
+    Account with READ permission for: Applications, Scripts, RemediationScripts, Users will be needed i.e.:
+     - DeviceManagementApps.Read.All
+     - DeviceManagementManagedDevices.Read.All
+     - DeviceManagementConfiguration.Read.All
+     - User.Read.All
 
     .PARAMETER credential
     Credentials for connecting to Intune.
@@ -1115,12 +1119,12 @@
 
             $lastUpdatedTimeUtc = Get-ItemPropertyValue $newestWin32AppRecord.PSPath -Name LastUpdatedTimeUtc
             try {
-                $complianceStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\ComplianceStateMessage" -Name ComplianceStateMessage | ConvertFrom-Json -ErrorAction Stop
+                $complianceStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\ComplianceStateMessage" -Name ComplianceStateMessage -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
             } catch {
                 Write-Verbose "`tUnable to get Compliance State Message data"
             }
             try {
-                $enforcementStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\EnforcementStateMessage" -Name EnforcementStateMessage | ConvertFrom-Json -ErrorAction Stop
+                $enforcementStateMessage = Get-ItemPropertyValue "$($newestWin32AppRecord.PSPath)\EnforcementStateMessage" -Name EnforcementStateMessage -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
             } catch {
                 Write-Verbose "`tUnable to get Enforcement State Message data"
             }
