@@ -1395,6 +1395,14 @@
                     # sort
                     $resultsWithSettings = $resultsWithSettings | Sort-Object -Property Scope, PolicyName
 
+                    # modify inner sections margins
+                    $innerSectionStyle = New-HTMLSectionStyle -RequestConfiguration
+                    Add-HTMLStyle -Css @{
+                        "$($innerSectionStyle.Section)" = @{
+                            'margin-bottom' = '20px'
+                        }
+                    } -SkipTags
+
                     New-HTMLSection -HeaderText "Policies with settings details" -HeaderTextAlignment left -CanCollapse -BackgroundColor DeepSkyBlue -HeaderBackGroundColor DeepSkyBlue -HeaderTextSize 10 -HeaderTextColor EgyptianBlue -Direction row {
                         $resultsWithSettings | % {
                             $policy = $_
@@ -1411,7 +1419,7 @@
                             $policy = $policy | Select-Object -Property * -ExcludeProperty $excludeProperty
                             #endregion prepare data
 
-                            New-HTMLSection -HeaderText $policy.PolicyName -HeaderTextAlignment left -CanCollapse -BackgroundColor White -HeaderBackGroundColor White -HeaderTextSize 12 -HeaderTextColor EgyptianBlue {
+                            New-HTMLSection -HeaderText $policy.PolicyName -HeaderTextAlignment left -CanCollapse -BackgroundColor White -HeaderBackGroundColor White -HeaderTextSize 12 -HeaderTextColor EgyptianBlue -StyleSheetsConfiguration $innerSectionStyle {
                                 # render main policy
                                 New-HTMLSection -HeaderText 'Policy' -HeaderBackGroundColor Wedgewood -BackgroundColor White {
                                     New-HTMLTable -DataTable $policy -WordBreak 'break-all' -HideFooter -DisableInfo -HideButtons -DisablePaging -DisableSearch -DisableOrdering
@@ -1437,9 +1445,6 @@
                                     }
                                 }
                             }
-
-                            # hack for getting new line between sections
-                            New-HTMLText -Text '.' -Color DeepSkyBlue
                         }
                     }
                 }
