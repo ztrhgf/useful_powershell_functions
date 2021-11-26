@@ -1284,7 +1284,7 @@
         $param.session = $session
     }
 
-    $settingDetails = Invoke-Command @param
+    $settingDetails = Invoke-Command @param | select -Property * -ExcludeProperty PSComputerName, RunspaceId, PSShowComputerName
     #endregion get data
 
     if ($settingDetails) {
@@ -1380,7 +1380,7 @@
         $param.session = $session
     }
 
-    $settingDetails = Invoke-Command @param
+    $settingDetails = Invoke-Command @param | select -Property * -ExcludeProperty PSComputerName, RunspaceId, PSShowComputerName
 
     if ($settingDetails) {
         $property = [ordered]@{
@@ -1484,7 +1484,7 @@
         $param.session = $session
     }
 
-    $settingDetails = Invoke-Command @param
+    $settingDetails = Invoke-Command @param | select -Property * -ExcludeProperty PSComputerName, RunspaceId, PSShowComputerName
 
     if ($settingDetails) {
         $property = [ordered]@{
