@@ -1,12 +1,12 @@
 ﻿function Get-CMLog {
     <#
     .SYNOPSIS
-    Function for opening of logs based on type of problem you have. So you don't have to remember which logs are for which problems.
+    Function for opening of SCCM logs based on type of the problem you have. So you don't have to remember which logs are for which problems.
     If possible, opens them in LogViewer or CMTrace or as last resort in default associated program.
 
     .DESCRIPTION
-    Function for opening of logs based on type of problem you have. So you don't have to remember which logs are for which problems.
-    If possible, opens them in LogViewer or CMTrace or as last resort in default associated program.
+    Function for opening of SCCM logs based on type of the problem you have. So you don't have to remember which logs are for which problems.
+    If possible, opens them in LogViewer or CMTrace or as a last resort in default associated program.
     Besides opening the log, function outputs the purpose of that log.
 
     List of all SCCM logs https://docs.microsoft.com/en-us/mem/configmgr/core/plan-design/hierarchy/log-files.
@@ -16,8 +16,11 @@
     In case the problem is related to SCCM server, this parameter will be omitted.
 
     .PARAMETER problem
-    Type of problem you are investigating.
+    Type of the problem you are investigating.
 
+    NotificationServerInstall
+    NotificationServer
+    NotificationClient
     AppInstallation
     AppDiscovery
     AppDownload
@@ -42,6 +45,7 @@
 
     .PARAMETER SCCMServer
     Name of SCCM server. Will be automatically used in case the problem is related to server, not the client.
+    To open server side logs admin share (C$) is used, so this function has to be run with appropriate rights.
 
     Default is $_SCCMServer.
 
@@ -59,8 +63,8 @@
     .NOTES
     To add new "problem" area:
         - add its name to ValidateSet of $problem parameter
-        - add its name to $serverProblems if applicable
-        - add new section to switch section
+        - add new section to the switch located in process block
+        - add its name to $serverProblems list if applicable
     #>
 
     [CmdletBinding()]
@@ -69,10 +73,11 @@
         [string] $computerName
         ,
         [Parameter(Mandatory = $true, Position = 1)]
-        [ValidateSet("AppInstallation", "AppDiscovery", "AppDownload", "PXE", "ContentDistribution", "OSInstallation", "CMClientInstallation", "CMClientPush", "Co-Management", "PolicyProcessing", "CMG", "CMGClient", "CMGDeployment", "Compliance", "Client Discovery", "Inventory", "WOL")]
+        [ValidateSet("AppInstallation", "AppDiscovery", "AppDownload", "PXE", "ContentDistribution", "OSInstallation", "CMClientInstallation", "CMClientPush", "Co-Management", "PolicyProcessing", "CMG", "CMGClient", "CMGDeployment", "Compliance", "Client Discovery", "Inventory", "WOL", "NotificationServerInstall", "NotificationServer", "NotificationClient", "BootImageUpdate")]
         [ValidateNotNullOrEmpty()]
         [string] $problem
         ,
+        [ValidateRange(0, 100)]
         [int] $maxHistory = 0
         ,
         [ValidateNotNullOrEmpty()]
@@ -80,6 +85,7 @@
     )
 
     begin {
+        #region checks
         # list of 'problems' whose logs are stored on SCCM server
         $serverProblems = "PXE", "ContentDistribution", "CMClientPush", "CMG", "CMGClient", "CMGDeployment", "Client Discovery", "WOL"
         if ($problem -in $serverProblems -and !$SCCMServer) {
@@ -88,34 +94,37 @@
         if ($problem -in $serverProblems -and $computerName) {
             Write-Warning "Problem '$problem' is related to SCCM server ($SCCMServer). Therefore ignoring computerName parameter."
         }
+        #endregion checks
 
+        #region define logs locations
         # client log location
         if ($computerName) {
             $clLog = "\\$computerName\C$\Windows\CCM\Logs"
         } else {
-            $clLog = "C:\Windows\CCM\Logs"
+            $clLog = "$env:windir\CCM\Logs"
         }
         # client setup log location
         if ($computerName) {
             $clStpLog = "\\$computerName\C$\Windows\ccmsetup\Logs"
         } else {
-            $clStpLog = "C:\Windows\ccmsetup\Logs\"
+            $clStpLog = "$env:windir\ccmsetup\Logs"
         }
         # server log locations
         $servLog = "\\$SCCMServer\C$\Program Files\SMS_CCM\Logs"
         $servLog2 = "\\$SCCMServer\C$\Program Files\Microsoft Configuration Manager\Logs"
+        #endregion define logs locations
 
-        # use best possible log viewer
-        $cmLogViewer = "C:\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\bin\CMLogViewer.exe"
+        #region get best possible log viewer
+        $cmLogViewer = "${env:ProgramFiles(x86)}\Microsoft Endpoint Manager\AdminConsole\bin\CMLogViewer.exe"
         $cmTrace = "$env:windir\CCM\CMTrace.exe"
         if (Test-Path $cmLogViewer) {
             $viewer = $cmLogViewer
         } elseif (Test-Path $cmTrace) {
             $viewer = $cmTrace
         }
-    }
+        #endregion get best possible log viewer
 
-    process {
+        #region helper functions
         function _openLog {
             param (
                 [string[]] $logs
@@ -128,7 +137,7 @@
                 $previousLogs = @()
                 foreach ($log in $logs) {
                     $logName = (Split-Path $log -Leaf) -replace "\.log$"
-                    # archived log in named with suffix originalLog-someNumbers.log or as originalLog.lo_
+                    # archived log is named with suffix originalLog-someNumbers.log or as originalLog.lo_
                     $previousLogs += $availableLogs | where { $_ -match ([Regex]::Escape("$logName") + "-|$logName\.lo_$") } | Select-Object -Last $maxHistory
                 }
                 $logs = @($logs) + @($previousLogs) | Select-Object -Unique
@@ -159,7 +168,10 @@
                 }
             }
         }
+        #endregion helper functions
+    }
 
+    process {
         switch ($problem) {
             "AppInstallation" {
                 "https://docs.microsoft.com/en-us/mem/configmgr/core/plan-design/hierarchy/log-files#BKMK_AppManageLog"
@@ -202,7 +214,7 @@
 
             "OSInstallation" {
                 "https://docs.microsoft.com/en-us/mem/configmgr/core/plan-design/hierarchy/log-files#BKMK_OSDLog"
-                "MP_ClientIDManager"
+                "MP_ClientIDManager (stored on MP!)"
                 "Smsts"
                 "Execmgr"
 
@@ -239,7 +251,9 @@
             }
 
             "PolicyProcessing" {
-                _openLog "$clLog\PolicyAgent.log"
+                "PolicyAgent"
+                "CcmMessaging"
+                _openLog "$clLog\PolicyAgent.log", "$clLog\CcmMessaging.log"
             }
 
             "CMG" {
@@ -297,6 +311,22 @@
 
             "WOL" {
                 _openLog "$servLog2\Wolmgr.log", "$servLog2\WolCmgr.log"
+            }
+
+            "NotificationServerInstall" {
+                _openLog "$servLog2\BgbSetup.log", "$servLog2\bgbisapiMSI.log"
+            }
+
+            "NotificationServer" {
+                _openLog "$servLog2\bgbmgr.log", "$servLog2\BGBServer.log", "$servLog\BgbHttpProxy"
+            }
+
+            "NotificationClient" {
+                _openLog "$clLog\CcmNotificationAgent.log"
+            }
+
+            "BootImageUpdate" {
+                _openLog "$env:windir\Logs\DISM\dism.log"
             }
 
             Default {
