@@ -136,9 +136,24 @@
     Write-Verbose "Converting '$MDMDiagReport' to XML object"
     [xml]$xml = Get-Content $MDMDiagReport -Raw -ErrorAction Stop
 
+    #region get enrollmentID
     Write-Verbose "Getting EnrollmentID"
-    $userEnrollmentID = Get-ScheduledTask -TaskName "*pushlaunch*" -TaskPath "\Microsoft\Windows\EnterpriseMgmt\*" | Select-Object -ExpandProperty TaskPath | Split-Path -Leaf
+    _Write-ProgressHelper -Message "Getting EnrollmentID" -StepNumber ($parentStep++) -totalSteps 8 -id 1
+
+    $scriptBlock = {
+        Get-ScheduledTask -TaskName "*pushlaunch*" -TaskPath "\Microsoft\Windows\EnterpriseMgmt\*" | Select-Object -ExpandProperty TaskPath | Split-Path -Leaf
+    }
+    $param = @{
+        scriptBlock = $scriptBlock
+    }
+    if ($computerName) {
+        $param.session = $session
+    }
+
+    $userEnrollmentID = Invoke-Command @param
+
     Write-Verbose "Your EnrollmentID is $userEnrollmentID"
+    #endregion get enrollmentID
 
     #region connection data
     if ($showConnectionData) {
