@@ -21,8 +21,9 @@
     Will be added as TableName property to new PowerShell object.
 
     .EXAMPLE
-    $actualContent = Invoke-WebRequest -Method GET -Headers $Headers -Uri "https://docs.microsoft.com/en-us/mem/configmgr/core/plan-design/hierarchy/log-files"
-    $table = $actualContent.ParsedHtml.getElementsByTagName('table')[0]
+    $pageContent = Invoke-WebRequest -Method GET -Headers $Headers -Uri "https://docs.microsoft.com/en-us/mem/configmgr/core/plan-design/hierarchy/log-files"
+    $table = $pageContent.ParsedHtml.getElementsByTagName('table')[0]
+    $tableContent = @(ConvertFrom-HTMLTable $table)
 
     Will receive web page content >> filter out first table on that page >> convert it to PSObject
 
