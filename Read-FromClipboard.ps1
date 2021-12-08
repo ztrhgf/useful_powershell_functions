@@ -1,11 +1,12 @@
 ﻿function Read-FromClipboard {
     <#
     .SYNOPSIS
-    Read text from clipboard and tries to convert it to PSCUSTOMOBJECT.
+    Read text from clipboard and tries to convert it to OBJECT.
 
     .DESCRIPTION
-    Read text from clipboard and tries to convert it to PSCUSTOMOBJECT.
-    At first it tries to convert clipboard data to XML, then JSON and as last resort to CSV.
+    Read text from clipboard and tries to convert it to OBJECT.
+
+    At first it tries to convert clipboard data as XML, then JSON and as a last resort as a CSV (delimited text).
 
     Content is trimmed! Because text can be indent etc.
 
@@ -15,21 +16,26 @@
     If delimiter wont be found in header, you will be asked to provide the correct one.
 
     .PARAMETER headerCount
-    Number of header columns. Can be used if content doesn't contain header itself and you don't want to specify header names. Will create numbered header columns starting from 1.
-    In case you specify header parameter too and count of header columns will be lesser than headerCount, columns will be added with numbers.
+    Number of header columns.
 
-    In case '1' is selected, result will be array of items instead of object with one property.
+    Can be used if processed content doesn't contain header itself and you don't want to specify header names.
 
-    So for: -header name, age -headerCount 5
-    Resultant header will be: name, age, 3, 4, 5
+    Will create numbered header columns starting from 1.
+    In case you specify 'header' parameter too but count of such headers will be lesser than 'headerCount', missing headers will be numbers.
+    - So for: -header name, age -headerCount 5
+      Resultant header will be: name, age, 3, 4, 5
+
+    In case you use -headerCount 1, the result will be array of items instead of object with one property ('1').
 
     .PARAMETER header
-    Columns that will be used for parsed clipboard content.
+    List of column names that will be set.
 
     Use if clipboard content doesn't contain header on its own. Or if you want to replace clipboards content header with your own, but in such case don't forget to use skipFirstLine parameter!
 
     .PARAMETER skipFirstLine
     Switch for skipping first clipboard content line.
+
+    When combined with 'header' parameter, original header names can be replaced with your own custom ones.
 
     .PARAMETER regexDelimiter
     Switch for letting function know that used delimiter is regex.
@@ -51,6 +57,23 @@
 
     .EXAMPLE
     Clipboard contains:
+    string, number, string
+    Carl, 14, Prague
+    John, 30, Boston
+
+    You run:
+    Read-FromClipboard -delimiter "," -skipFirstLine -header name, age, city
+
+    You get:
+    name  age  city
+    ---- ---- -----
+    Carl  14   Prague
+    John  30   Boston
+
+    I.e. you have object with replaced original header names.
+
+    .EXAMPLE
+    Clipboard contains:
     N4-01-NTB
     NG-06-NTB
     NG-07-NTB
@@ -67,7 +90,7 @@
     Clipboard contains:
     2002      89   144588      62016   1 893,42  33732   1 EXCEL
     5207     195   286136     109264  10 376,50  29220   1 explorer
-    426      19     6552      10560      43,13  23356   1 FileCoAuth
+    426    19     6552      10560      43,13  23356  20 1 FileCoAuth
 
     You run:
     Read-FromClipboard -delimiter "\s+" -regexDelimiter -headerCount 9 | Format-Table
@@ -77,7 +100,7 @@
     -    -   -      -      -     -      -     -          -
     2002 89  144588 62016  1     893,42 33732 1          EXCEL
     5207 195 286136 109264 10    376,50 29220 1          explorer
-    426  19  6552   10560  43,13 23356  1     FileCoAuth
+    426  19  6552   10560  43,13 23356  20    1          FileCoAuth
 
     .EXAMPLE
     Clipboard contains:
@@ -96,13 +119,13 @@
     426     19  6552   10560  43,13 23356  1     FileCoAuth
 
     .NOTES
-    Based on https://www.powershellgallery.com/packages/ImportExcel/7.2.1 so kudos to that author.
+    https://doitpsway.com/converting-clipboard-text-content-to-powershell-object
 
-    .LINK
-    https://github.com/ztrhgf
+    Inspired by Read-Clipboard from https://www.powershellgallery.com/packages/ImportExcel.
     #>
 
     [CmdletBinding()]
+    [Alias("ConvertFrom-Clipboard")]
     param (
         $delimiter = "`t",
 
@@ -120,12 +143,6 @@
     $data = Get-Clipboard -Raw
 
     if (!$data) { return }
-
-    if ($header -and $skipFirstLine) {
-        Write-Warning "Header parameter is used but skipFirstLine is not >> clipboard data cannot contain its own header!"
-    } elseif ($headerCount -and $skipFirstLine) {
-        Write-Warning "HeaderCount parameter is used but skipFirstLine is not >> clipboard data cannot contain its own header!"
-    }
 
     #region helper functions
     function _delimiter {
