@@ -34,6 +34,9 @@
     Invoke-IntuneWin32AppRedeploy -computerName PC-01 -getDataFromIntune credential $creds
 
     Get and show Win32App(s) deployed from Intune to computer PC-01. IDs of apps and targeted users will be translated to corresponding names. Selected ones will be then redeployed.
+
+    .NOTES
+    Author: @AndrewZtrhgf
     #>
 
     [CmdletBinding()]
@@ -225,7 +228,7 @@
     #region let user redeploy chosen app
     if ($win32App) {
         $hasDisplayNameProp = $win32App | Get-Member -Name DisplayName
-        $appToRedeploy = $win32App | ? { if ($hasDisplayNameProp) { if ($_.DisplayName) { $true } } else { $true } } | Out-GridView -PassThru -Title "Show apps for redeploy"
+        $appToRedeploy = $win32App | ? { if ($hasDisplayNameProp) { if ($_.DisplayName) { $true } } else { $true } } | Out-GridView -PassThru -Title "Pick app(s) for redeploy"
 
         if ($appToRedeploy) {
             $scriptBlock = {

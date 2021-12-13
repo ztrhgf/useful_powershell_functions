@@ -150,6 +150,8 @@
     Opens all logs related to PXE. If such logs are stored on SCCM server they will be searched on 'SCCM01'.
 
     .NOTES
+    Author: @AndrewZtrhgf
+
     To add new (problem) area:
         - add its name to ValidateSet of $area parameter
         - define what logs should be opened in $areaDetails
