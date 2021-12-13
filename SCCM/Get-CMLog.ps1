@@ -458,12 +458,16 @@
                     if ($secondRun) {
                         Write-Warning "Unable to get description for $lName log."
                     } else {
-                        Write-Warning "Unable to get description for $lName log. Trying to get newest data from Microsoft site"
+                        if ($lName -eq "client.msi_uninstall") {
+                            Write-Warning "For $lName there is no description."
+                        } else {
+                            Write-Warning "Unable to get description for $lName log. Trying to get newest data from Microsoft site"
 
-                        _getAndCacheLogDescription
+                            _getAndCacheLogDescription
 
-                        # try again
-                        _getLogDescription $logName -secondRun # secondRun parameter to avoid infinite loop
+                            # try again
+                            _getLogDescription $lName -secondRun # secondRun parameter to avoid infinite loop
+                        }
                     }
                 }
             }
