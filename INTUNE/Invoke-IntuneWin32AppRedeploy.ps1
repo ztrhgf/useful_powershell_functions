@@ -20,7 +20,7 @@
     Credential object used for Intune authentication.
 
     .PARAMETER tenantId
-    Azure Tenant ID for Intune authentication.
+    Azure Tenant ID for Intune App authentication.
 
     .PARAMETER excludeSystemApp
     Switch for excluding Apps targeted to SYSTEM.
@@ -34,6 +34,12 @@
     Invoke-IntuneWin32AppRedeploy -computerName PC-01 -getDataFromIntune credential $creds
 
     Get and show Win32App(s) deployed from Intune to computer PC-01. IDs of apps and targeted users will be translated to corresponding names. Selected ones will be then redeployed.
+
+    .EXAMPLE
+    Invoke-IntuneWin32AppRedeploy -computerName PC-01 -getDataFromIntune credential $creds -tenantId 123456789
+
+    Get and show Win32App(s) deployed from Intune to computer PC-01. App authentication will be used instead of user auth.
+    IDs of apps and targeted users will be translated to corresponding names. Selected ones will be then redeployed.
 
     .NOTES
     Author: @AndrewZtrhgf
@@ -257,7 +263,7 @@
                     }
                 }
 
-                Write-Warning "Invoking redeploy by restarting service IntuneManagementExtension"
+                Write-Warning "Invoking redeploy (by restarting service IntuneManagementExtension). Redeploy can take several minutes!"
                 Restart-Service IntuneManagementExtension -Force
             }
 

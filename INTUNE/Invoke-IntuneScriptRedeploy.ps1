@@ -1,4 +1,58 @@
 ﻿function Invoke-IntuneScriptRedeploy {
+    <#
+    .SYNOPSIS
+    Function for forcing redeploy of selected Script(s) deployed from Intune.
+    Scripts and Remediation scripts can be redeployed.
+
+    .DESCRIPTION
+    Function for forcing redeploy of selected Script(s) deployed from Intune.
+    Scripts and Remediation scripts can be redeployed.
+
+    OutGridView is used to output found Scripts.
+
+    Redeploy means that corresponding registry keys will be deleted from registry and service IntuneManagementExtension will be restarted.
+
+    .PARAMETER computerName
+    Name of remote computer where you want to force the redeploy.
+
+    .PARAMETER scriptType
+    Mandatory parameter for selecting type of the script you want to show&redeploy.
+    Possible values are script, remediationScript.
+
+    .PARAMETER getDataFromIntune
+    Switch for getting Scripts and User names from Intune, so locally used IDs can be translated to them.
+
+    .PARAMETER credential
+    Credential object used for Intune authentication.
+
+    .PARAMETER tenantId
+    Azure Tenant ID for Intune App authentication.
+
+    .EXAMPLE
+    Invoke-IntuneScriptRedeploy -scriptType script
+
+    Get and show common Script(s) deployed from Intune to this computer. Selected ones will be then redeployed.
+
+    .EXAMPLE
+    Invoke-IntuneScriptRedeploy -scriptType remediationScript
+
+    Get and show Remediation Script(s) deployed from Intune to this computer. Selected ones will be then redeployed.
+
+    .EXAMPLE
+    Invoke-IntuneScriptRedeploy -scriptType remediationScript -computerName PC-01 -getDataFromIntune credential $creds
+
+    Get and show Script(s) deployed from Intune to computer PC-01. IDs of scripts and targeted users will be translated to corresponding names. Selected ones will be then redeployed.
+
+    .EXAMPLE
+    Invoke-IntuneScriptRedeploy -scriptType remediationScript -computerName PC-01 -getDataFromIntune credential $creds -tenantId 123456789
+
+    Get and show Script(s) deployed from Intune to computer PC-01. App authentication will be used instead of user auth.
+    IDs of scripts and targeted users will be translated to corresponding names. Selected ones will be then redeployed.
+
+    .NOTES
+    Author: @AndrewZtrhgf
+    #>
+
     [CmdletBinding()]
     param (
         [string] $computerName,
@@ -319,7 +373,7 @@
                     }
                 }
 
-                Write-Warning "Invoking redeploy by restarting service IntuneManagementExtension"
+                Write-Warning "Invoking redeploy (by restarting service IntuneManagementExtension). Redeploy can take several minutes!"
                 Restart-Service IntuneManagementExtension -Force
             }
 
