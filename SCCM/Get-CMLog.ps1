@@ -210,15 +210,19 @@
         $clientLog = "\\$computerName\C$\Windows\CCM\Logs"
         # client's setup log location
         $clientSetupLog = "\\$computerName\C$\Windows\ccmsetup\Logs"
-        # on computer that runs Remote Control
+        # Remote Control log location (stored on computer that runs Remote Control)
         $remoteControlLog = "\\$computerName\C$\Windows\Temp"
+        # SCCM console log location (stored on computer that runs SCCM console)
+        $sccmConsoleLog = "\\$computerName\C$\Program Files (x86)\Microsoft Endpoint Manager\AdminConsole\AdminUILog"
     } else {
         # client's log location
         $clientLog = "$env:windir\CCM\Logs"
         # client's setup log location
         $clientSetupLog = "$env:windir\ccmsetup\Logs"
-        # on computer that runs Remote Control
+        # Remote Control log location (stored on computer that runs Remote Control)
         $remoteControlLog = "$env:windir\Temp"
+        # SCCM console log location (stored on computer that runs SCCM console)
+        $sccmConsoleLog = "${env:ProgramFiles(x86)}\Microsoft Endpoint Manager\AdminConsole\AdminUILog"
     }
     # client's SMSTS log location
     $clientSMSTSLog = "$clientLog\SMSTSLog"
@@ -235,6 +239,11 @@
 
     #region define where specific logs are stored
     $logDetails = @(
+        [PSCustomObject]@{
+            logName   = @('AdminUI.ExtensionInstaller', 'ConfigMgrAdminUISetup', 'CreateTSMedia', 'FeatureExtensionInstaller', 'ResourceExplorer', 'SmsAdminUI')
+            logFolder = $sccmConsoleLog
+        },
+
         [PSCustomObject]@{
             logName   = @('CMRcViewer')
             logFolder = $remoteControlLog
@@ -256,7 +265,7 @@
         },
 
         [PSCustomObject]@{
-            logName   = @('adctrl', 'ADForestDisc', 'adminservice', 'ADService', 'adsgdis', 'adsysdis', 'adusrdis', 'BusinessAppProcessWorker', 'ccm', 'CertMgr', 'chmgr', 'Cidm', 'CollectionAADGroupSyncWorker', 'colleval', 'compmon', 'compsumm', 'ComRegSetup', 'dataldr', 'ddm', 'despool', 'distmgr', 'EPCtrlMgr', 'EPMgr', 'EPSetup', 'EnrollSrv', 'EnrollWeb', 'ExternalNotificationsWorker', 'fspmgr', 'hman', 'Inboxast', 'inboxmgr', 'inboxmon', 'invproc', 'migmctrl', 'mpcontrol', 'mpfdm', 'mpMSI', 'MPSetup', 'netdisc', 'NotiCtrl', 'ntsvrdis', 'Objreplmgr', 'offermgr', 'offersum', 'OfflineServicingMgr', 'outboxmon', 'PerfSetup', 'PkgXferMgr', 'policypv', 'rcmctrl', 'replmgr', 'ResourceExplorer', 'RESTPROVIDERSetup', 'ruleengine', 'schedule', 'sender', 'sinvproc', 'sitecomp', 'sitectrl', 'sitestat', 'SMS_AZUREAD_DISCOVERY_AGENT', 'SMS_BUSINESS_APP_PROCESS_MANAGER', 'SMS_DataEngine', 'SMS_ISVUPDATES_SYNCAGENT', 'SMS_MESSAGE_PROCESSING_ENGINE', 'SMS_OrchestrationGroup', 'SMS_PhasedDeployment', 'SMS_REST_PROVIDER', 'SmsAdminUI', 'smsbkup', 'smsdbmon', 'SMSENROLLSRVSetup', 'SMSENROLLWEBSetup', 'smsexec', 'SMSFSPSetup', 'SMSProv', 'srsrpMSI', 'srsrpsetup', 'statesys', 'statmgr', 'swmproc', 'UXAnalyticsUploadWorker', 'ConfigMgrPrereq', 'ConfigMgrSetup', 'ConfigMgrSetupWizard', 'SMS_BOOTSTRAP', 'smstsvc', 'DWSSMSI', 'DWSSSetup', 'Microsoft.ConfigMgrDataWarehouse', 'FspIsapi', 'fspMSI', 'CcmIsapi', 'CCM_STS', 'ClientAuth', 'MP_CliReg', 'MP_Ddr', 'MP_Framework', 'MP_GetAuth', 'MP_GetPolicy', 'MP_Hinv', 'MP_Location', 'MP_OOBMgr', 'MP_Policy', 'MP_RegistrationManager', 'MP_Relay', 'MP_RelayMsgMgr', 'MP_Retry', 'MP_Sinv', 'MP_SinvCollFile', 'MP_Status', 'UserService', 'CollEval', 'Cloudusersync', 'Dataldr', 'Distmgr', 'Dmpdownloader', 'Dmpuploader', 'EndpointConnectivityCheckWorker', 'WsfbSyncWorker', 'objreplmgr', 'PolicyPV', 'outgoingcontentmanager', 'ServiceConnectionTool', 'Sitecomp', 'SMS_CLOUDCONNECTION', 'Smsprov', 'SrvBoot', 'Statesys', 'PatchDownloader', 'SUPSetup', 'WCM', 'WSUSCtrl', 'wsyncmgr', 'WUSSyncXML', 'PrestageContent', 'SMS_ImplicitUninstall', 'SMSdpmon', 'aikbmgr', 'AIUpdateSvc', 'AIUSMSI', 'AIUSSetup', 'ManagedProvider', 'MVLSImport', 'Smsbkup', 'smssqlbkup', 'Smswriter', 'Crp', 'Crpctrl', 'Crpsetup', 'Crpmsi', 'NDESPlugin', 'bgbmgr', 'BGBServer', 'BgbSetup', 'bgbisapiMSI', 'CloudMgr', 'CMGSetup', 'CMGService', 'SMS_Cloud_ProxyConnector', 'CMGContentService', 'CMGHttpHandler', 'ConfigMgrAdminUISetup', 'CloudDP', 'DataTransferService', 'PullDP', 'smsdpprov', 'smsdpusage', 'M365ADeploymentPlanWorker', 'M365ADeviceHealthWorker', 'M365AUploadWorker', 'AdminUI.ExtensionInstaller', 'FeatureExtensionInstaller', 'DMPRP', 'dmpmsi', 'DMPSetup', 'enrollsrvMSI', 'enrollmentweb', 'enrollwebMSI', 'enrollmentservice', 'SMS_DM', 'easdisc', 'DmClientHealth', 'DmClientRegistration', 'DmpDatastore', 'DmpDiscovery', 'DmpHardware', 'DmpIsapi', 'DmpSoftware', 'DmpStatus', 'CreateTSMedia', 'Dism', 'DriverCatalog', 'mcsisapi', 'mcsexec', 'mcsmgr', 'mcsprv', 'MCSSetup', 'MCSMSI', 'Mcsperf', 'MP_ClientIDManager', 'MP_DriverManager', 'Smpmgr', 'smpmsi', 'smpperf', 'smspxe', 'smssmpsetup', 'TaskSequenceProvider', 'srsrp', 'mtrmgr', 'wolcmgr', 'wolmgr', 'Change', 'SoftwareDistribution')
+            logName   = @('adctrl', 'ADForestDisc', 'adminservice', 'ADService', 'adsgdis', 'adsysdis', 'adusrdis', 'BusinessAppProcessWorker', 'ccm', 'CertMgr', 'chmgr', 'Cidm', 'CollectionAADGroupSyncWorker', 'colleval', 'compmon', 'compsumm', 'ComRegSetup', 'dataldr', 'ddm', 'despool', 'distmgr', 'EPCtrlMgr', 'EPMgr', 'EPSetup', 'EnrollSrv', 'EnrollWeb', 'ExternalNotificationsWorker', 'fspmgr', 'hman', 'Inboxast', 'inboxmgr', 'inboxmon', 'invproc', 'migmctrl', 'mpcontrol', 'mpfdm', 'mpMSI', 'MPSetup', 'netdisc', 'NotiCtrl', 'ntsvrdis', 'Objreplmgr', 'offermgr', 'offersum', 'OfflineServicingMgr', 'outboxmon', 'PerfSetup', 'PkgXferMgr', 'policypv', 'rcmctrl', 'replmgr', 'RESTPROVIDERSetup', 'ruleengine', 'schedule', 'sender', 'sinvproc', 'sitecomp', 'sitectrl', 'sitestat', 'SMS_AZUREAD_DISCOVERY_AGENT', 'SMS_BUSINESS_APP_PROCESS_MANAGER', 'SMS_DataEngine', 'SMS_ISVUPDATES_SYNCAGENT', 'SMS_MESSAGE_PROCESSING_ENGINE', 'SMS_OrchestrationGroup', 'SMS_PhasedDeployment', 'SMS_REST_PROVIDER', 'smsbkup', 'smsdbmon', 'SMSENROLLSRVSetup', 'SMSENROLLWEBSetup', 'smsexec', 'SMSFSPSetup', 'SMSProv', 'srsrpMSI', 'srsrpsetup', 'statesys', 'statmgr', 'swmproc', 'UXAnalyticsUploadWorker', 'ConfigMgrPrereq', 'ConfigMgrSetup', 'ConfigMgrSetupWizard', 'SMS_BOOTSTRAP', 'smstsvc', 'DWSSMSI', 'DWSSSetup', 'Microsoft.ConfigMgrDataWarehouse', 'FspIsapi', 'fspMSI', 'CcmIsapi', 'CCM_STS', 'ClientAuth', 'MP_CliReg', 'MP_Ddr', 'MP_Framework', 'MP_GetAuth', 'MP_GetPolicy', 'MP_Hinv', 'MP_Location', 'MP_OOBMgr', 'MP_Policy', 'MP_RegistrationManager', 'MP_Relay', 'MP_RelayMsgMgr', 'MP_Retry', 'MP_Sinv', 'MP_SinvCollFile', 'MP_Status', 'UserService', 'CollEval', 'Cloudusersync', 'Dataldr', 'Distmgr', 'Dmpdownloader', 'Dmpuploader', 'EndpointConnectivityCheckWorker', 'WsfbSyncWorker', 'objreplmgr', 'PolicyPV', 'outgoingcontentmanager', 'ServiceConnectionTool', 'Sitecomp', 'SMS_CLOUDCONNECTION', 'Smsprov', 'SrvBoot', 'Statesys', 'PatchDownloader', 'SUPSetup', 'WCM', 'WSUSCtrl', 'wsyncmgr', 'WUSSyncXML', 'PrestageContent', 'SMS_ImplicitUninstall', 'SMSdpmon', 'aikbmgr', 'AIUpdateSvc', 'AIUSMSI', 'AIUSSetup', 'ManagedProvider', 'MVLSImport', 'Smsbkup', 'smssqlbkup', 'Smswriter', 'Crp', 'Crpctrl', 'Crpsetup', 'Crpmsi', 'NDESPlugin', 'bgbmgr', 'BGBServer', 'BgbSetup', 'bgbisapiMSI', 'CloudMgr', 'CMGSetup', 'CMGService', 'SMS_Cloud_ProxyConnector', 'CMGContentService', 'CMGHttpHandler', 'CloudDP', 'DataTransferService', 'PullDP', 'smsdpprov', 'smsdpusage', 'M365ADeploymentPlanWorker', 'M365ADeviceHealthWorker', 'M365AUploadWorker', 'DMPRP', 'dmpmsi', 'DMPSetup', 'enrollsrvMSI', 'enrollmentweb', 'enrollwebMSI', 'enrollmentservice', 'SMS_DM', 'easdisc', 'DmClientHealth', 'DmClientRegistration', 'DmpDatastore', 'DmpDiscovery', 'DmpHardware', 'DmpIsapi', 'DmpSoftware', 'DmpStatus', 'Dism', 'DriverCatalog', 'mcsisapi', 'mcsexec', 'mcsmgr', 'mcsprv', 'MCSSetup', 'MCSMSI', 'Mcsperf', 'MP_ClientIDManager', 'MP_DriverManager', 'Smpmgr', 'smpmsi', 'smpperf', 'smspxe', 'smssmpsetup', 'TaskSequenceProvider', 'srsrp', 'mtrmgr', 'wolcmgr', 'wolmgr', 'Change', 'SoftwareDistribution')
             logFolder = $serverLog, $serverLog2
         },
 
