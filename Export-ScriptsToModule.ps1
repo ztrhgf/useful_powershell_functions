@@ -18,7 +18,8 @@ function Export-ScriptsToModule {
         Default is UTF8.
 
     .PARAMETER includeUncommitedUntracked
-        Export also uncommited and untracked files.
+        Export also functions from modified-and-uncommited and untracked files.
+        And use modified-and-untracked module manifest if necessary.
 
     .PARAMETER dontCheckSyntax
         Switch that will disable syntax checking of created module.
@@ -80,6 +81,8 @@ function Export-ScriptsToModule {
         $modulePath = Join-Path $moduleFolder "$moduleName.psm1"
         $function2Export = @()
         $alias2Export = @()
+        # contains function that will be exported to the module
+        # the key is name of the function and value is its text definition
         $lastCommitFileContent = @{ }
         $location = Get-Location
         Set-Location $scriptFolder
@@ -94,10 +97,10 @@ function Export-ScriptsToModule {
         }
         Set-Location $location
 
-        #
-        # there are untracked and/or uncommited files
-        # instead just ignoring them try to get and use previous version from GIT
+        #region get last commited content of the modified untracked or uncommited files
         if ($unfinishedFile) {
+            # there are untracked and/or uncommited files
+            # instead just ignoring them try to get and use previous version from GIT
             [System.Collections.ArrayList] $unfinishedFile = @($unfinishedFile)
 
             # helper function to be able to catch errors and all outputs
@@ -125,37 +128,46 @@ function Export-ScriptsToModule {
                 }
             }
 
-            Set-Location $scriptFolder
-            $unfinishedFile2 = $unfinishedFile.Clone()
-            $unfinishedFile2 | % {
-                $file = $_
-                try {
-                    $lastCommitContent = _startProcess git "show HEAD:$file" -ErrorAction Stop
-                } catch {
-                    Write-Warning "GIT: $_"
-                }
-                if (!$lastCommitContent -or $lastCommitContent -match "^fatal: ") {
-                    Write-Warning "Skipping changed but uncommited/untracked file: $file"
-                } else {
+            $unfinishedScriptFile = $unfinishedFile.Clone() | ? { $_ -like "*.ps1" }
+
+            if (!$includeUncommitedUntracked) {
+                Set-Location $scriptFolder
+
+                $unfinishedScriptFile | % {
+                    $file = $_
+                    $lastCommitContent = $null
                     $fName = [System.IO.Path]::GetFileNameWithoutExtension($file)
-                    Write-Warning "$fName has uncommited changed. For module generating I will use its version from previous commit"
-                    $lastCommitFileContent.$fName = $lastCommitContent
-                    $unfinishedFile.Remove($file)
+
+                    try {
+                        $lastCommitContent = _startProcess git "show HEAD:$file" -ErrorAction Stop
+                    } catch {
+                        Write-Verbose "GIT error: $_"
+                    }
+
+                    if (!$lastCommitContent -or $lastCommitContent -match "^fatal: ") {
+                        Write-Warning "$fName has uncommited changes. Skipping, because no previous file version was found in GIT"
+                    } else {
+                        Write-Warning "$fName has uncommited changes. For module generating I will use content from its last commit"
+                        $lastCommitFileContent.$fName = $lastCommitContent
+                        $unfinishedFile.Remove($file)
+                    }
                 }
+
+                Set-Location $location
             }
-            Set-Location $location
 
             # unix / replace by \
             $unfinishedFile = $unfinishedFile -replace "/", "\"
-            $unfinishedFileName = $unfinishedFile | % { [System.IO.Path]::GetFileName($_) }
 
-            if ($includeUncommitedUntracked -and $unfinishedFileName) {
-                Write-Warning "Exporting changed but uncommited/untracked functions: $($unfinishedFileName -join ', ')"
+            $unfinishedScriptFileName = $unfinishedScriptFile | % { [System.IO.Path]::GetFileName($_) }
+
+            if ($includeUncommitedUntracked -and $unfinishedScriptFileName) {
+                Write-Warning "Exporting changed but uncommited/untracked functions: $($unfinishedScriptFileName -join ', ')"
                 $unfinishedFile = @()
             }
         }
+        #endregion get last commited content of the modified untracked or uncommited files
 
-        #
         # in ps1 files to export leave just these in consistent state
         $script2Export = (Get-ChildItem (Join-Path $scriptFolder "*.ps1") -File).FullName | where {
             $partName = ($_ -split "\\")[-2..-1] -join "\"
@@ -171,16 +183,18 @@ function Export-ScriptsToModule {
             return
         }
 
+        #region cleanup old module folder
         if (Test-Path $modulePath -ErrorAction SilentlyContinue) {
-            Remove-Item $moduleFolder -Recurse -Confirm:$false -ErrorAction SilentlyContinue
+            Write-Verbose "Removing $moduleFolder"
+            Remove-Item $moduleFolder -Recurse -Confirm:$false -ErrorAction Stop
             Start-Sleep 1
+            [Void][System.IO.Directory]::CreateDirectory($moduleFolder)
         }
+        #endregion cleanup old module folder
 
-        [Void][System.IO.Directory]::CreateDirectory($moduleFolder)
+        Write-Verbose "Functions from the '$scriptFolder' will be converted to module '$modulePath'"
 
-        Write-Verbose "To $modulePath`n"
-
-        # to hash $lastCommitFileContent add pair, where key is name of the function and value is its text definition
+        #region fill $lastCommitFileContent hash with functions content
         $script2Export | % {
             $script = $_
             $fName = [System.IO.Path]::GetFileNameWithoutExtension($script)
@@ -190,7 +204,6 @@ function Export-ScriptsToModule {
 
             # add function content only in case it isn't added already (to avoid overwrites)
             if (!$lastCommitFileContent.containsKey($fName)) {
-
                 # check, that file contain just one function definition and nothing else
                 $ast = [System.Management.Automation.Language.Parser]::ParseFile("$script", [ref] $null, [ref] $null)
                 # just END block should exist
@@ -277,29 +290,28 @@ function Export-ScriptsToModule {
                 $lastCommitFileContent.$fName = $content
             }
         }
+        #endregion fill $lastCommitFileContent hash with functions content
 
         if ($markAutoGenerated) {
             "# _AUTO_GENERATED_" | Out-File $modulePath $enc
             "" | Out-File $modulePath -Append $enc
         }
 
-        #
-        # save all functions content to module file
+        #region save all functions content to the module file
         # store name of every function for later use in Export-ModuleMember
-        $lastCommitFileContent.GetEnumerator() | % {
+        $lastCommitFileContent.GetEnumerator() | Sort-Object Name | % {
             $fName = $_.Key
             $content = $_.Value
 
             Write-Verbose "- exporting function: $fName"
-
             $function2Export += $fName
 
             $content | Out-File $modulePath -Append $enc
             "" | Out-File $modulePath -Append $enc
         }
+        #endregion save all functions content to the module file
 
-        #
-        # set what functions and aliases should be exported from module
+        #region set what functions and aliases should be exported from module
         # explicit export is much faster than use *
         if (!$function2Export) {
             throw "There are none functions to export! Wrong path??"
@@ -312,6 +324,7 @@ function Export-ScriptsToModule {
             $function2Export = $function2Export | Select-Object -Unique | Sort-Object
 
             "Export-ModuleMember -function $($function2Export -join ', ')" | Out-File $modulePath -Append $enc
+            "" | Out-File $modulePath -Append $enc
         }
 
         if ($alias2Export) {
@@ -324,12 +337,26 @@ function Export-ScriptsToModule {
 
             "Export-ModuleMember -alias $($alias2Export -join ', ')" | Out-File $modulePath -Append $enc
         }
+        #endregion set what functions and aliases should be exported from module
 
         #region process module manifest (psd1) file
         $manifestFile = (Get-ChildItem (Join-Path $scriptFolder "*.psd1") -File).FullName
 
         if ($manifestFile) {
             if ($manifestFile.count -eq 1) {
+                $partName = ($manifestFile -split "\\")[-2..-1] -join "\"
+                if ($partName -in $unfinishedFile -and !$includeUncommitedUntracked) {
+                    Write-Warning "Module manifest file '$manifestFile' is modified but not commited."
+
+                    $choice = ""
+                    while ($choice -notmatch "^[Y|N]$") {
+                        $choice = Read-Host "Continue? (Y|N)"
+                    }
+                    if ($choice -eq "N") {
+                        break
+                    }
+                }
+
                 try {
                     Write-Verbose "Processing '$manifestFile' manifest file"
                     $manifestDataHash = Import-PowerShellDataFile $manifestFile -ErrorAction Stop
@@ -378,7 +405,6 @@ function Export-ScriptsToModule {
             $param["includeUncommitedUntracked"] = $true
         }
 
-        Write-Verbose " - $moduleFolder"
         _generatePSModule @param
 
         if (!$dontCheckSyntax -and (Get-Command Invoke-ScriptAnalyzer -ErrorAction SilentlyContinue)) {
