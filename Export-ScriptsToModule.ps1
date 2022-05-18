@@ -1,4 +1,4 @@
-function Export-ScriptsToModule {
+﻿function Export-ScriptsToModule {
     <#
     .SYNOPSIS
         Function for generating Powershell module from ps1 scripts (that contains definition of functions) that are stored in given folder.
@@ -218,7 +218,7 @@ function Export-ScriptsToModule {
                         $ast -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
                         # Class methods have a FunctionDefinitionAst under them as well, but we don't want them.
                         ($PSVersionTable.PSVersion.Major -lt 5 -or
-                            $ast.Parent -isnot [System.Management.Automation.Language.FunctionMemberAst])
+                        $ast.Parent -isnot [System.Management.Automation.Language.FunctionMemberAst])
                     }, $false)
 
                 if ($functionDefinition.count -ne 1) {
@@ -382,6 +382,10 @@ function Export-ScriptsToModule {
                     # create empty one and than update it because of the bug https://github.com/PowerShell/PowerShell/issues/5922
                     New-ModuleManifest -Path (Join-Path $moduleFolder "$moduleName.psd1")
                     Update-ModuleManifest -Path (Join-Path $moduleFolder "$moduleName.psd1") @manifestDataHash
+                    if ($manifestDataHash.PrivateData.PSData) {
+                        # bugfix because PrivateData parameter expect content of PSData instead of PrivateData
+                        Update-ModuleManifest -Path (Join-Path $moduleFolder "$moduleName.psd1") -PrivateData $manifestDataHash.PrivateData.PSData
+                    }
                 }
             } else {
                 Write-Warning "Module manifest file won't be processed because more then one were found."
