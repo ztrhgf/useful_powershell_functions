@@ -1,4 +1,4 @@
-﻿#Requires -Module ActiveDirectory
+#Requires -Module ActiveDirectory
 function Get-MDMClientData {
     <#
     .SYNOPSIS
@@ -56,35 +56,6 @@ function Get-MDMClientData {
 
         [System.Management.Automation.PSCredential] $sccmAdminServiceCredential
     )
-
-    #region checks
-    if (!$computer) { throw "Computer parameter is missing" }
-
-    if ($combineDataFrom -contains "Intune") {
-        try {
-            $null = Get-Command New-GraphAPIAuthHeader -ErrorAction Stop
-        } catch {
-            throw "New-GraphAPIAuthHeader command isn't available"
-        }
-    }
-
-    if ($combineDataFrom -contains "SCCM") {
-        try {
-            $null = Get-Command Invoke-CMAdminServiceQuery -ErrorAction Stop
-        } catch {
-            throw "Invoke-CMAdminServiceQuery command isn't available"
-        }
-    }
-
-    # it needs originally installed ActiveDirectory module, NOT copied/hacked one!
-    if (!(Get-Module ActiveDirectory -ListAvailable)) {
-        if ((Get-WmiObject win32_operatingsystem -Property caption).caption -match "server") {
-            throw "Module ActiveDirectory is missing. Use: Install-WindowsFeature RSAT-AD-PowerShell -IncludeManagementTools"
-        } else {
-            throw "Module ActiveDirectory is missing. Use: Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online"
-        }
-    }
-    #endregion checks
 
     #region helper functions
     function New-GraphAPIAuthHeader {
@@ -609,6 +580,35 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
     #endregion helper functions
 
+    #region checks
+    if (!$computer) { throw "Computer parameter is missing" }
+
+    if ($combineDataFrom -contains "Intune") {
+        try {
+            $null = Get-Command New-GraphAPIAuthHeader -ErrorAction Stop
+        } catch {
+            throw "New-GraphAPIAuthHeader command isn't available"
+        }
+    }
+
+    if ($combineDataFrom -contains "SCCM") {
+        try {
+            $null = Get-Command Invoke-CMAdminServiceQuery -ErrorAction Stop
+        } catch {
+            throw "Invoke-CMAdminServiceQuery command isn't available"
+        }
+    }
+
+    # it needs originally installed ActiveDirectory module, NOT copied/hacked one!
+    if (!(Get-Module ActiveDirectory -ListAvailable)) {
+        if ((Get-WmiObject win32_operatingsystem -Property caption).caption -match "server") {
+            throw "Module ActiveDirectory is missing. Use: Install-WindowsFeature RSAT-AD-PowerShell -IncludeManagementTools"
+        } else {
+            throw "Module ActiveDirectory is missing. Use: Get-WindowsCapability -Name RSAT* -Online | Add-WindowsCapability -Online"
+        }
+    }
+    #endregion checks
+
     #region get data
     if ($combineDataFrom -contains "Intune" -or $combineDataFrom -contains "AAD") {
         $header = New-GraphAPIAuthHeader -credential $graphCredential -ErrorAction Stop
@@ -641,7 +641,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         $additionalData = Invoke-CMAdminServiceQuery @param | select $properties
 
         $sccmDevice = $sccmDevice | % {
-            $deviceAdtData = $additionalData | ?  ResourceID -EQ $_.MachineId
+            $deviceAdtData = $additionalData | ? ResourceID -EQ $_.MachineId
             $_ | select *, @{n = 'InstallDate'; e = { if ($deviceAdtData.InstallDate) { Get-Date $deviceAdtData.InstallDate } } }, @{n = 'LastBootUpTime'; e = { if ($deviceAdtData.LastBootUpTime) { Get-Date $deviceAdtData.LastBootUpTime } } }
         }
     }
