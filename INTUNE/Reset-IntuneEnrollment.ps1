@@ -217,9 +217,39 @@
                     } else {
                         Start-Process -FilePath "$env:WINDIR\System32\DeviceEnroller.exe" -ArgumentList "/C /AutoenrollMDM" -NoNewWindow -Wait -PassThru
                     }
+
+            } else {
+                # Apparently Intune has never been configured, so just start the enrollment task
+                if($tasks = @(Get-ScheduledTask | Where-Object { $_.TaskPath -like "*Microsoft*Windows*EnterpriseMgmt\*" })) {
+                    # There should be only one task here
+                    if($tasks.Count -eq 1) {
+                        $tasks | Start-ScheduledTask
+                    } else {
+                        $tasks | ft
+                        throw "Unsure about enrollment task to be run. This might be a bug in the script"
+                    }
                 } else {
-                    throw "Unable to obtain enrollment GUID value from task scheduler. Aborting"
+                    throw "Unable to obtain enrollment task from task scheduler. Aborting"
                 }
+            }
+
+            # check certificates
+            $i = 30
+            Write-Host "Waiting for Intune certificate creation"  -ForegroundColor Cyan
+            Write-Verbose "two certificates should be created in Computer Personal cert. store (issuer: MS-Organization-Access, MS-Organization-P2P-Access [$(Get-Date -Format yyyy)]"
+
+            Start-Sleep 10
+            while (!(Get-ChildItem 'Cert:\LocalMachine\My\' | ? { $_.Issuer -match "CN=Microsoft Intune MDM Device CA" }) -and $i -gt 0) {
+                Start-Sleep 1
+                --$i
+                $i
+            }
+
+            if ($i -eq 0) {
+                Write-Warning "Intune certificate (issuer: Microsoft Intune MDM Device CA) isn't created (yet?)"
+            } else {
+                Write-Host "DONE :)" -ForegroundColor Green
+            }	 
             } catch [System.Exception] {
                 throw "Error message: $($_.Exception.Message)"
             }
