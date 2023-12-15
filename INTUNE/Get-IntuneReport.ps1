@@ -141,7 +141,7 @@
         #endregion prepare filter for FeatureUpdateDeviceState report if not available
 
         #region prepare filter for DeviceInstallStatusByApp/UserInstallStatusAggregateByApp report if not available
-        if ($reportName -in ('DeviceInstallStatusByApp', 'UserInstallStatusAggregateByApp') -and (!$filter -or $filter -notmatch "^PolicyId eq ")) {
+        if ($reportName -in ('DeviceInstallStatusByApp', 'UserInstallStatusAggregateByApp') -and (!$filter -or $filter -notmatch "^ApplicationId eq ")) {
             Write-Warning "Report $reportName requires filter in form: `"ApplicationId eq '<someApplicationId>'`""
             # get list of all available applications
             $allApps = (Invoke-RestMethod -Headers $header -Uri "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$filter=(microsoft.graph.managedApp/appAvailability%20eq%20null%20or%20microsoft.graph.managedApp/appAvailability%20eq%20%27lineOfBusiness%27%20or%20isAssigned%20eq%20true)&`$orderby=displayName&" -Method Get).Value | select displayName, isAssigned, productVersion, id
